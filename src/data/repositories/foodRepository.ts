@@ -24,6 +24,21 @@ export type NewFoodRecord = Omit<
   'use_count' | 'last_used_at' | 'deleted_at'
 >;
 
+export type FoodSort = 'most_used' | 'recently_used' | 'name' | 'recently_added';
+
+export type FoodUpdate = Pick<
+  FoodRecord,
+  | 'name'
+  | 'reference_weight_g'
+  | 'calories'
+  | 'protein_g'
+  | 'fat_g'
+  | 'carbs_g'
+  | 'sodium_mg'
+  | 'cholesterol_mg'
+  | 'updated_at'
+>;
+
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
@@ -60,6 +75,29 @@ export class FoodRepository {
     );
   }
 
+  async listActive(
+    query: string,
+    sort: FoodSort = 'most_used',
+    limit = 200,
+  ): Promise<FoodRecord[]> {
+    const orderBy: Record<FoodSort, string> = {
+      most_used: 'use_count DESC, last_used_at DESC, name COLLATE NOCASE',
+      recently_used:
+        'CASE WHEN last_used_at IS NULL THEN 1 ELSE 0 END, last_used_at DESC, name COLLATE NOCASE',
+      name: 'name COLLATE NOCASE',
+      recently_added: 'created_at DESC, name COLLATE NOCASE',
+    };
+
+    return this.database.getAllAsync<FoodRecord>(
+      `SELECT * FROM foods
+       WHERE deleted_at IS NULL AND name LIKE ? ESCAPE '\\' COLLATE NOCASE
+       ORDER BY ${orderBy[sort]}
+       LIMIT ?;`,
+      `%${escapeLike(query.trim())}%`,
+      limit,
+    );
+  }
+
   async searchActive(query: string, limit = 30): Promise<FoodRecord[]> {
     return this.database.getAllAsync<FoodRecord>(
       `SELECT * FROM foods
@@ -88,6 +126,76 @@ export class FoodRepository {
        WHERE id = ?;`,
       usedAt,
       usedAt,
+      id,
+    );
+  }
+
+  async update(id: string, food: FoodUpdate): Promise<void> {
+    await this.database.runAsync(
+      `UPDATE foods SET
+        name = ?, reference_weight_g = ?, calories = ?, protein_g = ?,
+        fat_g = ?, carbs_g = ?, sodium_mg = ?, cholesterol_mg = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL;`,
+      food.name,
+      food.reference_weight_g,
+      food.calories,
+      food.protein_g,
+      food.fat_g,
+      food.carbs_g,
+      food.sodium_mg,
+      food.cholesterol_mg,
+      food.updated_at,
+      id,
+    );
+  }
+
+  async listDeleted(): Promise<FoodRecord[]> {
+    return this.database.getAllAsync<FoodRecord>(
+      `SELECT * FROM foods
+       WHERE deleted_at IS NOT NULL
+       ORDER BY deleted_at DESC, name COLLATE NOCASE;`,
+    );
+  }
+
+  async listActiveRecipeReferences(id: string): Promise<string[]> {
+    const rows = await this.database.getAllAsync<{ name: string }>(
+      `SELECT DISTINCT recipes.name
+       FROM recipe_ingredients
+       JOIN recipes ON recipes.id = recipe_ingredients.recipe_id
+       WHERE recipe_ingredients.food_id = ? AND recipes.deleted_at IS NULL
+       UNION
+       SELECT DISTINCT recipes.name
+       FROM recipe_variation_overrides
+       JOIN recipe_variations
+         ON recipe_variations.id = recipe_variation_overrides.variation_id
+       JOIN recipes ON recipes.id = recipe_variations.recipe_id
+       WHERE recipe_variation_overrides.food_id = ?
+         AND recipe_variations.deleted_at IS NULL
+         AND recipes.deleted_at IS NULL
+       ORDER BY name COLLATE NOCASE;`,
+      id,
+      id,
+    );
+    return rows.map(({ name }) => name);
+  }
+
+  async softDelete(id: string, deletedAt: string): Promise<void> {
+    await this.database.runAsync(
+      `UPDATE foods
+       SET deleted_at = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL;`,
+      deletedAt,
+      deletedAt,
+      id,
+    );
+  }
+
+  async restore(id: string, restoredAt: string): Promise<void> {
+    await this.database.runAsync(
+      `UPDATE foods
+       SET deleted_at = NULL, updated_at = ?
+       WHERE id = ? AND deleted_at IS NOT NULL;`,
+      restoredAt,
       id,
     );
   }

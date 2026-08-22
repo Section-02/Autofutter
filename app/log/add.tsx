@@ -17,6 +17,13 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function suggestedName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+}
+
 export default function AddFoodScreen() {
   const params = useLocalSearchParams<{ date?: string | string[] }>();
   const date = first(params.date) ?? todayLocalDate();
@@ -41,15 +48,11 @@ export default function AddFoodScreen() {
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length === 0) {
-      return;
-    }
+    if (trimmed.length === 0) return;
     let active = true;
     const timeout = setTimeout(() => {
       searchService.search(trimmed).then((items) => {
-        if (active) {
-          setResults(items);
-        }
+        if (active) setResults(items);
       });
     }, 150);
     return () => {
@@ -58,11 +61,28 @@ export default function AddFoodScreen() {
     };
   }, [query, searchService]);
 
-  const shown = query.trim().length === 0 ? recent : results;
+  const trimmedQuery = query.trim();
+  const shown = trimmedQuery.length === 0 ? recent : results;
   const select = (result: LocalFoodSearchResult) => {
     router.push({
       pathname: '/log/amount',
       params: { date, kind: result.kind, id: result.id },
+    });
+  };
+  const createCustom = () => {
+    router.push({
+      pathname: '/foods/new',
+      params: {
+        returnTo: 'log',
+        date,
+        query: suggestedName(trimmedQuery),
+      },
+    });
+  };
+  const searchUsda = () => {
+    router.push({
+      pathname: '/foods/usda',
+      params: { returnTo: 'log', date, query: trimmedQuery },
     });
   };
 
@@ -86,7 +106,7 @@ export default function AddFoodScreen() {
           style={styles.search}
           value={query}
         />
-        <Text style={styles.sectionTitle}>{query.trim() === '' ? 'RECENT' : 'RESULTS'}</Text>
+        <Text style={styles.sectionTitle}>{trimmedQuery === '' ? 'RECENT' : 'RESULTS'}</Text>
         {shown.map((result) => (
           <Pressable
             key={`${result.kind}-${result.id}`}
@@ -102,11 +122,30 @@ export default function AddFoodScreen() {
         ))}
         {shown.length === 0 ? (
           <Text style={styles.empty}>
-            {query.trim() === ''
+            {trimmedQuery === ''
               ? 'No recently used foods.'
-              : `No foods found for "${query.trim()}"`}
+              : `No foods found for "${trimmedQuery}"`}
           </Text>
         ) : null}
+
+        <View style={styles.actions}>
+          <Pressable
+            onPress={createCustom}
+            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          >
+            <Text style={styles.actionText}>
+              {trimmedQuery ? `+ Create "${suggestedName(trimmedQuery)}"` : '+ Create Custom Food'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={searchUsda}
+            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          >
+            <Text style={styles.actionText}>
+              {trimmedQuery ? `Search USDA for "${suggestedName(trimmedQuery)}"` : 'Search USDA'}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -124,6 +163,14 @@ const styles = StyleSheet.create({
   resultText: { flex: 1 },
   name: { color: colors.text, fontSize: 16, fontWeight: '600' },
   kind: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  empty: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl },
+  empty: { color: colors.textMuted, textAlign: 'center', marginVertical: spacing.xl },
+  actions: {
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  action: { justifyContent: 'center', minHeight: 48 },
+  actionText: { color: colors.accent, fontSize: 15, fontWeight: '700' },
   pressed: { opacity: 0.55 },
 });
