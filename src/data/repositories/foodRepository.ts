@@ -24,6 +24,10 @@ export type NewFoodRecord = Omit<
   'use_count' | 'last_used_at' | 'deleted_at'
 >;
 
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
 export class FoodRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
@@ -52,6 +56,38 @@ export class FoodRepository {
   async findById(id: string): Promise<FoodRecord | null> {
     return this.database.getFirstAsync<FoodRecord>(
       'SELECT * FROM foods WHERE id = ?;',
+      id,
+    );
+  }
+
+  async searchActive(query: string, limit = 30): Promise<FoodRecord[]> {
+    return this.database.getAllAsync<FoodRecord>(
+      `SELECT * FROM foods
+       WHERE deleted_at IS NULL AND name LIKE ? ESCAPE '\\' COLLATE NOCASE
+       ORDER BY name COLLATE NOCASE
+       LIMIT ?;`,
+      `%${escapeLike(query.trim())}%`,
+      limit,
+    );
+  }
+
+  async listRecent(limit = 8): Promise<FoodRecord[]> {
+    return this.database.getAllAsync<FoodRecord>(
+      `SELECT * FROM foods
+       WHERE deleted_at IS NULL AND last_used_at IS NOT NULL
+       ORDER BY last_used_at DESC, use_count DESC, name COLLATE NOCASE
+       LIMIT ?;`,
+      limit,
+    );
+  }
+
+  async updateUsage(id: string, usedAt: string): Promise<void> {
+    await this.database.runAsync(
+      `UPDATE foods
+       SET use_count = use_count + 1, last_used_at = ?, updated_at = ?
+       WHERE id = ?;`,
+      usedAt,
+      usedAt,
       id,
     );
   }

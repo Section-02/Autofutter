@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "scheme": "personalnutritiontracker",
     "userInterfaceStyle": "light",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "ios": {
       "bundleIdentifier": "com.personalnutritiontracker.app",
       "supportsTablet": false
@@ -19,7 +21,8 @@
         {
           "backgroundColor": "#5B2A86"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

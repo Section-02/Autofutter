@@ -37,7 +37,7 @@ describe('database migrations', () => {
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(1);
+    expect(version?.version).toBe(2);
   });
 
   it('is idempotent after the latest migration has been applied', async () => {
@@ -48,7 +48,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(1);
+    expect(rows?.count).toBe(2);
   });
 
   it('rolls back a failed migration without recording its version', async () => {
@@ -84,15 +84,12 @@ describe('database migrations', () => {
     );
     expect(foreignKeys?.foreign_keys).toBe(1);
 
-    await expect(
-      database.execAsync(
-        `INSERT INTO recipe_ingredients (
-          id, recipe_id, food_id, weight_g, sort_order, created_at, updated_at
-        ) VALUES (
-          'ingredient-id', 'missing-recipe', 'missing-food', 100, 0,
-          '2026-08-21T12:00:00.000Z', '2026-08-21T12:00:00.000Z'
-        );`,
-      ),
-    ).rejects.toThrow();
+    const definitions = await database.getAllAsync<{ table: string }>(
+      'PRAGMA foreign_key_list(recipe_ingredients);',
+    );
+    expect(definitions.map(({ table }) => table).sort()).toEqual([
+      'foods',
+      'recipes',
+    ]);
   });
 });
