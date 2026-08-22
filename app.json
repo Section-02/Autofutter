@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Personal Nutrition Tracker",
+    "slug": "personal-nutrition-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "personalnutritiontracker",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios"],
+    "ios": {
+      "bundleIdentifier": "com.personalnutritiontracker.app",
+      "supportsTablet": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#5B2A86"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

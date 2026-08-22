@@ -1,0 +1,12 @@
+export const colors = {
+  background: '#FAF8FC',
+  surface: '#FFFFFF',
+  text: '#211A27',
+  textMuted: '#756C7B',
+  border: '#E6DFEA',
+  accent: '#6F3598',
+  accentSoft: '#EADCF3',
+  calorieBelow: '#2E7D4F',
+  calorieWithin: '#C56B1A',
+  calorieOver: '#B43B3B',
+} as const;

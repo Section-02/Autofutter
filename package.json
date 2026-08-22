@@ -1,0 +1,48 @@
+{
+  "name": "personal-nutrition-tracker",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "EXPO_NO_TELEMETRY=1 expo start --dev-client",
+    "ios": "EXPO_NO_TELEMETRY=1 expo run:ios",
+    "lint": "EXPO_NO_TELEMETRY=1 expo lint",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "validate": "npm run typecheck && npm run lint && npm test"
+  },
+  "dependencies": {
+    "expo": "~57.0.15",
+    "expo-constants": "~57.0.13",
+    "expo-dev-client": "~57.0.14",
+    "expo-font": "~57.0.1",
+    "expo-linking": "~57.0.7",
+    "expo-router": "~57.0.15",
+    "expo-splash-screen": "~57.0.7",
+    "expo-sqlite": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "expo-symbols": "~57.0.2",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jest": "^29.5.14",
+    "@types/react": "~19.2.2",
+    "better-sqlite3": "^12.4.1",
+    "eslint": "^9.39.2",
+    "eslint-config-expo": "~57.0.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~57.0.4",
+    "react-test-renderer": "19.2.3",
+    "typescript": "~6.0.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "testPathIgnorePatterns": ["/node_modules/", "/ios/"]
+  }
+}

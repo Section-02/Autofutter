@@ -1,0 +1,86 @@
+# Dependencies and package-manager caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/install-state.gz
+
+# Expo local state and generated output
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# Generated native projects and build products (Expo CNG)
+/ios/
+/android/
+build/
+DerivedData/
+Pods/
+.kotlin/
+*.orig.*
+
+# Xcode user-specific state
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+
+# Credentials, signing material, and provisioning profiles
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.cer
+*.crt
+*.mobileprovision
+*.provisionprofile
+credentials/
+secrets/
+
+# Local environment and secret files
+.env
+.env.*
+!.env.example
+*.secret
+
+# Local SQLite databases and journals
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite-journal
+
+# Metro, tests, and TypeScript caches
+.metro-health-check*
+coverage/
+*.tsbuildinfo
+
+# Debug logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
