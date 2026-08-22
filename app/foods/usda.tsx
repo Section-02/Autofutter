@@ -32,10 +32,13 @@ export default function UsdaSearchScreen() {
     query?: string | string[];
     returnTo?: string | string[];
     date?: string | string[];
+    returnToken?: string | string[];
   }>();
   const initialQuery = first(params.query) ?? '';
-  const returnTo = first(params.returnTo) === 'log' ? 'log' : 'foods';
+  const requestedReturn = first(params.returnTo);
+  const returnTo = requestedReturn === 'log' ? 'log' : requestedReturn === 'recipe' ? 'recipe' : 'foods';
   const date = first(params.date) ?? todayLocalDate();
+  const returnToken = first(params.returnToken);
   const client = useMemo(() => new UsdaClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
@@ -44,10 +47,12 @@ export default function UsdaSearchScreen() {
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const initialSearchStarted = useRef(false);
+  const searchInFlight = useRef(false);
 
   const search = useCallback(async (requestedQuery = query) => {
     const trimmed = requestedQuery.trim();
-    if (!trimmed) return;
+    if (!trimmed || searchInFlight.current) return;
+    searchInFlight.current = true;
     Keyboard.dismiss();
     setLoading(true);
     setError(null);
@@ -62,6 +67,7 @@ export default function UsdaSearchScreen() {
           : 'USDA search requires an internet connection.',
       );
     } finally {
+      searchInFlight.current = false;
       setLoading(false);
     }
   }, [client, query]);
@@ -78,6 +84,7 @@ export default function UsdaSearchScreen() {
       pathname: '/foods/new',
       params: {
         returnTo,
+        returnToken,
         date,
         sourceType: 'usda',
         sourceId: food.fdcId,
@@ -107,7 +114,7 @@ export default function UsdaSearchScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           onChangeText={setQuery}
-          onSubmitEditing={(event) => search(event.nativeEvent.text)}
+          onSubmitEditing={() => search()}
           placeholder="Search FoodData Central..."
           placeholderTextColor={colors.textMuted}
           returnKeyType="search"

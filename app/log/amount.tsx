@@ -26,7 +26,12 @@ export default function FoodAmountScreen() {
   const params = useLocalSearchParams<{ date?: string | string[]; kind?: string | string[]; id?: string | string[] }>();
   const date = first(params.date) ?? todayLocalDate();
   const kindValue = first(params.kind);
-  const kind: LoggableSourceKind = kindValue === 'recipe' ? 'recipe' : 'food';
+  const kind: LoggableSourceKind =
+    kindValue === 'recipe_variation'
+      ? 'recipe_variation'
+      : kindValue === 'recipe'
+        ? 'recipe'
+        : 'food';
   const id = first(params.id) ?? '';
   const database = useAppDatabase();
   const service = useMemo(() => new FoodLoggingService(database), [database]);
@@ -37,7 +42,7 @@ export default function FoodAmountScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    service.loadSource(kind, id).then(setSource).catch(() => setError('Food could not be loaded.'));
+    service.loadSource(kind, id).then(setSource).catch(() => setError('Item could not be loaded.'));
   }, [id, kind, service]);
 
   const grams = parseAmount(amount);

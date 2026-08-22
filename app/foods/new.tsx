@@ -11,6 +11,7 @@ import {
 } from '@/components/food/FoodForm';
 import { useAppDatabase } from '@/hooks/useAppDatabase';
 import { FoodService } from '@/services/foods/foodService';
+import { deliverRecipeIngredient } from '@/services/recipes/recipeIngredientHandoff';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { todayLocalDate } from '@/utils/dates';
@@ -32,8 +33,10 @@ export default function NewFoodScreen() {
   const service = useMemo(() => new FoodService(database), [database]);
   const [busy, setBusy] = useState(false);
   const sourceType = first(params.sourceType) === 'usda' ? 'usda' : 'custom';
-  const returnTo = first(params.returnTo) === 'log' ? 'log' : 'foods';
+  const requestedReturn = first(params.returnTo);
+  const returnTo = requestedReturn === 'log' ? 'log' : requestedReturn === 'recipe' ? 'recipe' : 'foods';
   const sourceId = first(params.sourceId) ?? null;
+  const returnToken = first(params.returnToken);
   const date = first(params.date) ?? todayLocalDate();
 
   const initialValues: FoodFormInitialValues = {
@@ -62,7 +65,11 @@ export default function NewFoodScreen() {
           pathname: '/log/amount',
           params: { date, kind: 'food', id: food.id },
         });
+      } else if (returnTo === 'recipe' && sourceType === 'usda') {
+        deliverRecipeIngredient(returnToken, food);
+        router.dismiss(2);
       } else {
+        if (returnTo === 'recipe') deliverRecipeIngredient(returnToken, food);
         router.back();
       }
     } finally {

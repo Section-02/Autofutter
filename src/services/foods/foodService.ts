@@ -34,11 +34,18 @@ export class FoodInUseError extends Error {
 }
 
 function validateNumber(value: number, label: string, positive = false): void {
-  if (!Number.isFinite(value) || (positive ? value <= 0 : value < 0)) {
+  if (!Number.isFinite(value)) {
     throw new FoodValidationError(
       positive
-        ? `${label} must be greater than zero.`
-        : `${label} must be zero or greater.`,
+        ? label + " is required."
+        : label + " is required. Enter 0 if the value is truly zero.",
+    );
+  }
+  if (positive ? value <= 0 : value < 0) {
+    throw new FoodValidationError(
+      positive
+        ? label + " must be greater than zero."
+        : label + " must be zero or greater.",
     );
   }
 }

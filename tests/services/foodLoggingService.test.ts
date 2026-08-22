@@ -1,5 +1,6 @@
 import { initializeDatabase } from '../../src/data/database/database';
 import { DailySummaryRepository } from '../../src/data/repositories/dailySummaryRepository';
+import { RecipeRepository } from '../../src/data/repositories/recipeRepository';
 import { FoodLogRepository } from '../../src/data/repositories/foodLogRepository';
 import {
   FoodRepository,
@@ -12,6 +13,7 @@ import {
 import { calculateRecipeNutrition } from '../../src/domain/nutrition/recipeCalculator';
 import type { WeightedIngredient } from '../../src/domain/nutrition/nutritionTypes';
 import { FoodLoggingService } from '../../src/services/logging/foodLoggingService';
+import { RecipeService } from '../../src/services/recipes/recipeService';
 import { TestDatabase } from '../database/testDatabase';
 
 const timestamp = '2026-08-21T19:30:00.000Z';
@@ -202,6 +204,73 @@ describe('FoodLoggingService', () => {
       calories: expected.calories,
       nutrition_basis_weight_g: 1_653,
       nutrition_basis_calories: exactTotal.calories,
+    });
+  });
+
+  it('resolves, snapshots, and logs a Recipe Variation by grams', async () => {
+    const beef = testFood('beef');
+    const beans = { ...testFood('beans'), calories: 130 };
+    const pinto = { ...testFood('pinto'), calories: 145 };
+    await new FoodRepository(database).create(beef);
+    await new FoodRepository(database).create(beans);
+    await new FoodRepository(database).create(pinto);
+    let id = 0;
+    const recipes = new RecipeService(database, {
+      createId: () => "recipe-id-" + ++id,
+      now: () => new Date(timestamp),
+    });
+    const recipe = await recipes.create({
+      name: 'Chili',
+      finishedWeightG: 1_653,
+      ingredients: [
+        { foodId: beef.id, weightG: 500 },
+        { foodId: beans.id, weightG: 400 },
+      ],
+    });
+    const variation = await recipes.createVariation(recipe.recipe.id, {
+      name: 'Pinto Beans',
+      finishedWeightG: 1_700,
+      overrides: [{
+        action: 'replace',
+        baseIngredientId: recipe.ingredients[1]!.id,
+        foodId: pinto.id,
+      }],
+    });
+
+    const entry = await service.addWeighedEntry({
+      kind: 'recipe_variation',
+      sourceId: variation.variation.id,
+      amountG: 187,
+      logDate: '2026-08-21',
+    });
+    const expected = roundLoggedNutrition(
+      scaleNutrition(variation.exactNutrition, 187, 1_700),
+    );
+
+    expect(entry).toMatchObject({
+      entry_type: 'recipe_variation',
+      source_recipe_id: recipe.recipe.id,
+      source_variation_id: variation.variation.id,
+      display_name_snapshot: 'Chili — Pinto Beans',
+      calories: expected.calories,
+      nutrition_basis_calories: variation.exactNutrition.calories,
+    });
+    expect(await new RecipeRepository(database).findById(recipe.recipe.id)).toMatchObject({
+      use_count: 1,
+    });
+
+    await recipes.updateVariation(variation.variation.id, {
+      name: 'Pinto Beans',
+      finishedWeightG: 1_700,
+      overrides: [{
+        action: 'change_weight',
+        baseIngredientId: recipe.ingredients[0]!.id,
+        weightG: 250,
+      }],
+    });
+    await expect(new FoodLogRepository(database).findById(entry.id)).resolves.toMatchObject({
+      calories: expected.calories,
+      nutrition_basis_calories: variation.exactNutrition.calories,
     });
   });
 

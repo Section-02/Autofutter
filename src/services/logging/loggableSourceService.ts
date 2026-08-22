@@ -3,8 +3,9 @@ import { RecipeRepository } from '@/data/repositories/recipeRepository';
 import type { DatabaseConnection } from '@/data/database/types';
 import { calculateRecipeNutrition } from '@/domain/nutrition/recipeCalculator';
 import type { Nutrition, WeightedIngredient } from '@/domain/nutrition/nutritionTypes';
+import { RecipeService } from '@/services/recipes/recipeService';
 
-export type LoggableSourceKind = 'food' | 'recipe';
+export type LoggableSourceKind = 'food' | 'recipe' | 'recipe_variation';
 
 export type LoggableSource = Readonly<{
   kind: LoggableSourceKind;
@@ -14,6 +15,9 @@ export type LoggableSource = Readonly<{
   nutritionBasis: Nutrition;
   useCount: number;
   lastUsedAt: string | null;
+  sourceFoodId: string | null;
+  sourceRecipeId: string | null;
+  sourceVariationId: string | null;
 }>;
 
 export class LoggableSourceService {
@@ -41,6 +45,32 @@ export class LoggableSourceService {
         },
         useCount: food.use_count,
         lastUsedAt: food.last_used_at,
+        sourceFoodId: food.id,
+        sourceRecipeId: null,
+        sourceVariationId: null,
+      };
+    }
+
+    if (kind === 'recipe_variation') {
+      const details = await new RecipeService(this.database).loadVariation(id);
+      if (
+        details.recipe.deleted_at !== null ||
+        details.variation.deleted_at !== null ||
+        details.variation.finished_weight_g === null
+      ) {
+        throw new Error('Completed recipe variation was not found.');
+      }
+      return {
+        kind,
+        id: details.variation.id,
+        name: `${details.recipe.name} — ${details.variation.name}`,
+        nutritionBasisWeightG: details.variation.finished_weight_g,
+        nutritionBasis: details.exactNutrition,
+        useCount: details.recipe.use_count,
+        lastUsedAt: details.recipe.last_used_at,
+        sourceFoodId: null,
+        sourceRecipeId: details.recipe.id,
+        sourceVariationId: details.variation.id,
       };
     }
 
@@ -56,8 +86,8 @@ export class LoggableSourceService {
     }
 
     const rows = await recipeRepository.listIngredients(id);
-    if (rows.length === 0) {
-      throw new Error('Recipe has no ingredients.');
+    if (rows.length === 0 || rows.some(({ food_deleted_at }) => food_deleted_at !== null)) {
+      throw new Error('Recipe has no active ingredients.');
     }
 
     const ingredients: WeightedIngredient[] = rows.map((row) => ({
@@ -83,6 +113,9 @@ export class LoggableSourceService {
       nutritionBasis: calculateRecipeNutrition(ingredients),
       useCount: recipe.use_count,
       lastUsedAt: recipe.last_used_at,
+      sourceFoodId: null,
+      sourceRecipeId: recipe.id,
+      sourceVariationId: null,
     };
   }
 }

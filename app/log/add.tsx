@@ -9,6 +9,7 @@ import {
   LocalFoodSearchService,
   type LocalFoodSearchResult,
 } from '@/services/logging/localFoodSearchService';
+import { RecipeService } from '@/services/recipes/recipeService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { todayLocalDate } from '@/utils/dates';
@@ -29,21 +30,34 @@ export default function AddFoodScreen() {
   const date = first(params.date) ?? todayLocalDate();
   const database = useAppDatabase();
   const searchService = useMemo(() => new LocalFoodSearchService(database), [database]);
+  const recipeService = useMemo(() => new RecipeService(database), [database]);
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LocalFoodSearchResult[]>([]);
   const [recent, setRecent] = useState<LocalFoodSearchResult[]>([]);
+  const [recipes, setRecipes] = useState<LocalFoodSearchResult[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      searchService.recent().then((items) => {
-        if (active) setRecent(items);
+      Promise.all([
+        searchService.recent(),
+        recipeService.list('', 'most_used'),
+      ]).then(([recentItems, recipeItems]) => {
+        if (!active) return;
+        setRecent(recentItems);
+        setRecipes(recipeItems
+          .filter(({ isComplete }) => isComplete)
+          .map(({ recipe }) => ({
+            kind: 'recipe' as const,
+            id: recipe.id,
+            name: recipe.name,
+            useCount: recipe.use_count,
+            lastUsedAt: recipe.last_used_at,
+          })));
       });
-      return () => {
-        active = false;
-      };
-    }, [searchService]),
+      return () => { active = false; };
+    }, [recipeService, searchService]),
   );
 
   useEffect(() => {
@@ -62,8 +76,14 @@ export default function AddFoodScreen() {
   }, [query, searchService]);
 
   const trimmedQuery = query.trim();
-  const shown = trimmedQuery.length === 0 ? recent : results;
-  const select = (result: LocalFoodSearchResult) => {
+  const select = async (result: LocalFoodSearchResult) => {
+    if (result.kind === 'recipe') {
+      const variations = await recipeService.listVariations(result.id);
+      if (variations.length > 0) {
+        router.push({ pathname: '/log/recipe-version', params: { date, id: result.id } });
+        return;
+      }
+    }
     router.push({
       pathname: '/log/amount',
       params: { date, kind: result.kind, id: result.id },
@@ -72,11 +92,7 @@ export default function AddFoodScreen() {
   const createCustom = () => {
     router.push({
       pathname: '/foods/new',
-      params: {
-        returnTo: 'log',
-        date,
-        query: suggestedName(trimmedQuery),
-      },
+      params: { returnTo: 'log', date, query: suggestedName(trimmedQuery) },
     });
   };
   const searchUsda = () => {
@@ -86,13 +102,32 @@ export default function AddFoodScreen() {
     });
   };
 
+  const resultRow = (result: LocalFoodSearchResult) => (
+    <Pressable
+      key={`${result.kind}-${result.id}`}
+      onPress={() => select(result)}
+      style={({ pressed }) => [styles.result, pressed && styles.pressed]}
+    >
+      <View style={styles.resultText}>
+        <Text style={styles.name}>{result.name}</Text>
+        <Text style={styles.kind}>{result.kind === 'recipe' ? 'Recipe' : 'Food'}</Text>
+      </View>
+      <SymbolView name="chevron.right" size={16} tintColor={colors.textMuted} />
+    </Pressable>
+  );
+
+  const recentRecipeIds = new Set(
+    recent.filter(({ kind }) => kind === 'recipe').map(({ id }) => id),
+  );
+  const unlistedRecipes = recipes.filter(({ id }) => !recentRecipeIds.has(id));
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="Back to Log" hitSlop={12} onPress={router.back}>
           <SymbolView name="chevron.left" size={20} tintColor={colors.text} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>ADD FOOD</Text>
+        <Text accessibilityRole="header" style={styles.title}>ADD TO LOG</Text>
         <View style={styles.headerSpacer} />
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -101,49 +136,38 @@ export default function AddFoodScreen() {
           autoCorrect={false}
           clearButtonMode="while-editing"
           onChangeText={setQuery}
-          placeholder="Search your foods..."
+          placeholder="Search foods and recipes..."
           placeholderTextColor={colors.textMuted}
           style={styles.search}
           value={query}
         />
-        <Text style={styles.sectionTitle}>{trimmedQuery === '' ? 'RECENT' : 'RESULTS'}</Text>
-        {shown.map((result) => (
-          <Pressable
-            key={`${result.kind}-${result.id}`}
-            onPress={() => select(result)}
-            style={({ pressed }) => [styles.result, pressed && styles.pressed]}
-          >
-            <View style={styles.resultText}>
-              <Text style={styles.name}>{result.name}</Text>
-              <Text style={styles.kind}>{result.kind === 'recipe' ? 'Recipe' : 'Food'}</Text>
-            </View>
-            <SymbolView name="chevron.right" size={16} tintColor={colors.textMuted} />
-          </Pressable>
-        ))}
-        {shown.length === 0 ? (
-          <Text style={styles.empty}>
-            {trimmedQuery === ''
-              ? 'No recently used foods.'
-              : `No foods found for "${trimmedQuery}"`}
-          </Text>
-        ) : null}
+
+        {trimmedQuery === '' ? (
+          <>
+            <Text style={styles.sectionTitle}>RECENT</Text>
+            {recent.map(resultRow)}
+            {recent.length === 0 ? <Text style={styles.empty}>No recently logged items.</Text> : null}
+            {unlistedRecipes.length > 0 ? (
+              <>
+                <Text style={styles.sectionTitle}>RECIPES</Text>
+                {unlistedRecipes.map(resultRow)}
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>RESULTS</Text>
+            {results.map(resultRow)}
+            {results.length === 0 ? <Text style={styles.empty}>{`No foods or recipes found for ""`}</Text> : null}
+          </>
+        )}
 
         <View style={styles.actions}>
-          <Pressable
-            onPress={createCustom}
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
-          >
-            <Text style={styles.actionText}>
-              {trimmedQuery ? `+ Create "${suggestedName(trimmedQuery)}"` : '+ Create Custom Food'}
-            </Text>
+          <Pressable onPress={createCustom} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+            <Text style={styles.actionText}>{trimmedQuery ? `+ Create "${suggestedName(trimmedQuery)}"` : '+ Create Custom Food'}</Text>
           </Pressable>
-          <Pressable
-            onPress={searchUsda}
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
-          >
-            <Text style={styles.actionText}>
-              {trimmedQuery ? `Search USDA for "${suggestedName(trimmedQuery)}"` : 'Search USDA'}
-            </Text>
+          <Pressable onPress={searchUsda} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+            <Text style={styles.actionText}>{trimmedQuery ? `Search USDA for "${suggestedName(trimmedQuery)}"` : 'Search USDA'}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -164,12 +188,7 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 16, fontWeight: '600' },
   kind: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   empty: { color: colors.textMuted, textAlign: 'center', marginVertical: spacing.xl },
-  actions: {
-    borderTopColor: colors.border,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.lg,
-    paddingTop: spacing.sm,
-  },
+  actions: { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, marginTop: spacing.lg, paddingTop: spacing.sm },
   action: { justifyContent: 'center', minHeight: 48 },
   actionText: { color: colors.accent, fontSize: 15, fontWeight: '700' },
   pressed: { opacity: 0.55 },

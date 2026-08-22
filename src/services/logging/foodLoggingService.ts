@@ -106,9 +106,9 @@ export class FoodLoggingService {
         log_date: input.logDate,
         logged_at: timestamp,
         entry_type: input.kind,
-        source_food_id: input.kind === 'food' ? input.sourceId : null,
-        source_recipe_id: input.kind === 'recipe' ? input.sourceId : null,
-        source_variation_id: null,
+        source_food_id: source.sourceFoodId,
+        source_recipe_id: source.sourceRecipeId,
+        source_variation_id: source.sourceVariationId,
         display_name_snapshot: source.name,
         amount_g: input.amountG,
         calories: nutrition.calories,
@@ -130,10 +130,10 @@ export class FoodLoggingService {
       };
 
       await new FoodLogRepository(transaction).insert(entry);
-      if (input.kind === 'food') {
-        await new FoodRepository(transaction).updateUsage(input.sourceId, timestamp);
-      } else {
-        await new RecipeRepository(transaction).updateUsage(input.sourceId, timestamp);
+      if (source.sourceFoodId !== null) {
+        await new FoodRepository(transaction).updateUsage(source.sourceFoodId, timestamp);
+      } else if (source.sourceRecipeId !== null) {
+        await new RecipeRepository(transaction).updateUsage(source.sourceRecipeId, timestamp);
       }
       await new DailySummaryRepository(transaction).recalculate(
         input.logDate,

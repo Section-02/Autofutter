@@ -67,7 +67,15 @@ describe('FoodService', () => {
         ...input(),
         nutrition: { ...input().nutrition, sodiumMg: Number.NaN },
       }),
-    ).rejects.toThrow('Sodium must be zero or greater.');
+    ).rejects.toThrow('Sodium is required. Enter 0 if the value is truly zero.');
+  });
+
+  it('accepts true zero nutrient values', async () => {
+    const created = await service.create({
+      ...input(),
+      nutrition: { ...input().nutrition, sodiumMg: 0, cholesterolMg: 0 },
+    });
+    expect(created).toMatchObject({ sodium_mg: 0, cholesterol_mg: 0 });
   });
 
   it('soft deletes and restores a food', async () => {
