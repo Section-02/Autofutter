@@ -8,7 +8,9 @@ import {
   type FoodLogEntryRecord,
 } from '@/data/repositories/foodLogRepository';
 import { GoalRepository } from '@/data/repositories/goalRepository';
+import { LogDayCompletionRepository } from '@/data/repositories/logDayCompletionRepository';
 import type { GoalValues } from '@/domain/goals/goalCalculator';
+import { isDayAutomaticallyEnded } from '@/domain/logging/dayCompletion';
 import { assertLocalDate } from '@/utils/dates';
 
 export const INITIAL_GOAL_DEFAULTS: GoalValues = {
@@ -22,7 +24,11 @@ export type DayLogData = Readonly<{
   summary: DailySummaryRecord;
   goal: GoalValues;
   isUsingInitialGoalDefaults: boolean;
+  dayEnded: boolean;
+  dayEndedAutomatically: boolean;
 }>;
+
+type Options = Readonly<{ now?: () => Date }>;
 
 function emptySummary(date: string): DailySummaryRecord {
   return {
@@ -39,15 +45,21 @@ function emptySummary(date: string): DailySummaryRecord {
 }
 
 export class LogQueryService {
-  constructor(private readonly database: DatabaseConnection) {}
+  private readonly now: () => Date;
+
+  constructor(private readonly database: DatabaseConnection, options: Options = {}) {
+    this.now = options.now ?? (() => new Date());
+  }
 
   async loadDay(date: string): Promise<DayLogData> {
     assertLocalDate(date);
-    const [entries, storedSummary, storedGoal] = await Promise.all([
+    const [entries, storedSummary, storedGoal, completion] = await Promise.all([
       new FoodLogRepository(this.database).listByDate(date),
       new DailySummaryRepository(this.database).findByDate(date),
       new GoalRepository(this.database).findForDate(date),
+      new LogDayCompletionRepository(this.database).findByDate(date),
     ]);
+    const dayEndedAutomatically = isDayAutomaticallyEnded(date, this.now());
 
     return {
       entries,
@@ -61,6 +73,8 @@ export class LogQueryService {
               calorieTolerancePercent: storedGoal.calorie_tolerance_percent,
             },
       isUsingInitialGoalDefaults: storedGoal === null,
+      dayEnded: completion !== null || dayEndedAutomatically,
+      dayEndedAutomatically,
     };
   }
 }

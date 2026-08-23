@@ -29,6 +29,7 @@ describe('database migrations', () => {
       'daily_nutrition_summaries',
       'food_log_entries',
       'foods',
+      'log_day_completions',
       'nutrition_goals',
       'recipe_ingredients',
       'recipe_variation_overrides',
@@ -37,7 +38,7 @@ describe('database migrations', () => {
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(3);
+    expect(version?.version).toBe(4);
   });
 
   it('is idempotent after the latest migration has been applied', async () => {
@@ -48,7 +49,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(3);
+    expect(rows?.count).toBe(4);
   });
 
   it('rolls back a failed migration without recording its version', async () => {

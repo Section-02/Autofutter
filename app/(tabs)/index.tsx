@@ -15,6 +15,7 @@ import {
   LogQueryService,
   type DayLogData,
 } from '@/services/logging/logQueryService';
+import { DayCompletionService } from '@/services/logging/dayCompletionService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { assertLocalDate, todayLocalDate } from '@/utils/dates';
@@ -37,11 +38,13 @@ export default function LogScreen() {
   const [selectedDate, setSelectedDate] = useState(() => safeRequestedDate(params.date));
   const [data, setData] = useState<DayLogData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [endingDay, setEndingDay] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       setError(null);
+      setData(null);
       new LogQueryService(database)
         .loadDay(selectedDate)
         .then((result) => {
@@ -59,13 +62,47 @@ export default function LogScreen() {
   const summary = data?.summary;
   const goal = data?.goal;
 
+  const endDay = async () => {
+    if (data === null || data.dayEnded || endingDay) return;
+    setEndingDay(true);
+    setError(null);
+    try {
+      await new DayCompletionService(database).endDay(selectedDate);
+      setData({ ...data, dayEnded: true, dayEndedAutomatically: false });
+    } catch {
+      setError('Unable to end this day.');
+    } finally {
+      setEndingDay(false);
+    }
+  };
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>LOG</Text>
-        <Pressable accessibilityLabel="Settings" hitSlop={12} style={styles.settingsButton} onPress={() => router.push('/settings')}>
-          <SymbolView name="gearshape" size={21} tintColor={colors.textMuted} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          {data !== null ? (
+            <Pressable
+              accessibilityLabel={data.dayEnded ? 'Day ended' : 'End day'}
+              accessibilityRole="button"
+              disabled={data.dayEnded || endingDay}
+              hitSlop={6}
+              onPress={endDay}
+              style={({ pressed }) => [
+                styles.endDayButton,
+                data.dayEnded && styles.endDayButtonEnded,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.endDayText, data.dayEnded && styles.endDayTextEnded]}>
+                {data.dayEnded ? '✓ ENDED' : endingDay ? 'ENDING…' : 'END DAY'}
+              </Text>
+            </Pressable>
+          ) : null}
+          <Pressable accessibilityLabel="Settings" hitSlop={12} onPress={() => router.push('/settings')}>
+            <SymbolView name="gearshape" size={21} tintColor={colors.textMuted} />
+          </Pressable>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <DateNavigator date={selectedDate} onChange={setSelectedDate} />
@@ -123,7 +160,11 @@ export default function LogScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.md },
-  settingsButton: { marginRight: 48 },
+  headerActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  endDayButton: { borderColor: colors.accent, borderRadius: 8, borderWidth: 1, minHeight: 28, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  endDayButtonEnded: { borderColor: colors.border },
+  endDayText: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  endDayTextEnded: { color: colors.textMuted },
   title: { color: colors.text, fontSize: 24, fontWeight: '700', letterSpacing: 0.5 },
   scrollContent: { paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.xl },
   error: { color: colors.calorieOver, textAlign: 'center' },
