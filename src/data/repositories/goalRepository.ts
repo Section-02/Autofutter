@@ -30,6 +30,14 @@ export class GoalRepository {
     );
   }
 
+  async listThrough(date: string): Promise<GoalRecord[]> {
+    return this.database.getAllAsync<GoalRecord>(
+      `SELECT * FROM nutrition_goals
+       WHERE effective_date <= ? ORDER BY effective_date ASC;`,
+      date,
+    );
+  }
+
   async upsert(record: GoalRecord): Promise<void> {
     await this.database.runAsync(
       `INSERT INTO nutrition_goals (

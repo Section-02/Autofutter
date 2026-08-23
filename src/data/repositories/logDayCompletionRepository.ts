@@ -15,6 +15,21 @@ export class LogDayCompletionRepository {
     );
   }
 
+  async listBetween(startDate: string | null, endDate: string): Promise<LogDayCompletionRecord[]> {
+    if (startDate === null) {
+      return this.database.getAllAsync<LogDayCompletionRecord>(
+        'SELECT * FROM log_day_completions WHERE date <= ? ORDER BY date ASC;',
+        endDate,
+      );
+    }
+    return this.database.getAllAsync<LogDayCompletionRecord>(
+      `SELECT * FROM log_day_completions
+       WHERE date >= ? AND date <= ? ORDER BY date ASC;`,
+      startDate,
+      endDate,
+    );
+  }
+
   async endDay(record: LogDayCompletionRecord): Promise<void> {
     await this.database.runAsync(
       `INSERT INTO log_day_completions (date, ended_at) VALUES (?, ?)

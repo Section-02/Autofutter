@@ -39,6 +39,14 @@ export function addLocalDays(value: string, amount: number): string {
   return toLocalDateString(date);
 }
 
+export function subtractLocalMonths(value: string, months: number): string {
+  const source = parseLocalDate(value);
+  const target = new Date(source.getFullYear(), source.getMonth() - months, 1, 12);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0, 12).getDate();
+  target.setDate(Math.min(source.getDate(), lastDay));
+  return toLocalDateString(target);
+}
+
 export function formatLongLocalDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, {
     weekday: 'long',

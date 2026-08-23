@@ -9,4 +9,5 @@ export const colors = {
   calorieBelow: '#2E7D4F',
   calorieWithin: '#D19A00',
   calorieOver: '#B43B3B',
+  calorieBand: '#F1DFC0',
 } as const;

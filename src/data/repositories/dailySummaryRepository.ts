@@ -22,6 +22,21 @@ export class DailySummaryRepository {
     );
   }
 
+  async listBetween(startDate: string | null, endDate: string): Promise<DailySummaryRecord[]> {
+    if (startDate === null) {
+      return this.database.getAllAsync<DailySummaryRecord>(
+        'SELECT * FROM daily_nutrition_summaries WHERE date <= ? ORDER BY date ASC;',
+        endDate,
+      );
+    }
+    return this.database.getAllAsync<DailySummaryRecord>(
+      `SELECT * FROM daily_nutrition_summaries
+       WHERE date >= ? AND date <= ? ORDER BY date ASC;`,
+      startDate,
+      endDate,
+    );
+  }
+
   async recalculate(date: string, updatedAt: string): Promise<void> {
     await this.database.runAsync(
       `INSERT INTO daily_nutrition_summaries (
