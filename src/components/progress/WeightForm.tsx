@@ -1,7 +1,8 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import type { WeightInput } from '@/services/progress/weightService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -28,10 +29,9 @@ export function WeightForm({ busy, initialDate, initialWeightLb, onDelete, onSub
       <View style={styles.content}>
         <Text style={styles.label}>WEIGHT</Text>
         <View style={styles.weightRow}>
-          <TextInput
+          <NumericTextInput
             accessibilityLabel="Weight in pounds"
             autoFocus={initialWeightLb === undefined}
-            keyboardType="decimal-pad"
             onChangeText={setWeight}
             placeholder="0.0"
             placeholderTextColor={colors.textMuted}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import type { QuickEntryInput } from '@/services/logging/quickEntryService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -72,13 +73,13 @@ export function QuickEntryForm({ date, initialValues, submitLabel, busy, onSubmi
       <Text style={styles.label}>NAME</Text>
       <TextInput autoCapitalize="words" onChangeText={setName} placeholder="Burger and fries" placeholderTextColor={colors.textMuted} style={styles.textInput} value={name} />
       <Text style={styles.label}>CALORIES</Text>
-      <View style={styles.numberRow}><TextInput keyboardType="decimal-pad" onChangeText={setCalories} placeholder="Required" placeholderTextColor={colors.textMuted} style={styles.mainNumber} value={calories} /><Text style={styles.unit}>kcal</Text></View>
+      <View style={styles.numberRow}><NumericTextInput onChangeText={setCalories} placeholder="Required" placeholderTextColor={colors.textMuted} style={styles.mainNumber} value={calories} /><Text style={styles.unit}>kcal</Text></View>
       <View style={styles.estimatedRow}><View style={styles.estimatedText}><Text style={styles.estimatedLabel}>Estimated</Text><Text style={styles.help}>Use the higher number when you have a range.</Text></View><Switch onValueChange={setEstimated} trackColor={{ false: colors.border, true: colors.accentSoft }} thumbColor={estimated ? colors.accent : colors.surface} value={estimated} /></View>
       <Pressable onPress={() => setExpanded((current) => !current)} style={styles.expand}>
         <Text style={styles.expandText}>{expanded ? 'Hide nutrition details' : 'Add nutrition details'}</Text>
         <SymbolView name={expanded ? 'chevron.up' : 'chevron.down'} size={14} tintColor={colors.accent} />
       </Pressable>
-      {expanded ? <View style={styles.details}>{details.map(({ key, label, unit }) => <View key={key} style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><TextInput accessibilityLabel={label} keyboardType="decimal-pad" onChangeText={(value) => setValues((current) => ({ ...current, [key]: value }))} placeholder="Unknown" placeholderTextColor={colors.textMuted} style={styles.detailInput} value={values[key]} /><Text style={styles.detailUnit}>{unit}</Text></View>)}</View> : null}
+      {expanded ? <View style={styles.details}>{details.map(({ key, label, unit }) => <View key={key} style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><NumericTextInput accessibilityLabel={label} onChangeText={(value) => setValues((current) => ({ ...current, [key]: value }))} placeholder="Unknown" placeholderTextColor={colors.textMuted} style={styles.detailInput} value={values[key]} /><Text style={styles.detailUnit}>{unit}</Text></View>)}</View> : null}
       {onDelete ? <Pressable onPress={onDelete} style={styles.delete}><Text style={styles.deleteText}>Delete Entry</Text></Pressable> : null}
     </ScrollView>
     <View style={styles.actionArea}><Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.button, (busy || pressed) && styles.dim]}><Text style={styles.buttonText}>{busy ? 'SAVING…' : submitLabel}</Text></Pressable></View>

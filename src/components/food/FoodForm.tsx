@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import type { Nutrition } from '@/domain/nutrition/nutritionTypes';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -170,7 +171,7 @@ export function FoodForm({
         <Text style={styles.sectionTitle}>NUTRITION FACTS</Text>
         <Text style={styles.help}>These nutrition facts are for:</Text>
         <View style={styles.referenceRow}>
-          <TextInput
+          <NumericTextInput
             accessibilityLabel="Reference weight"
             keyboardType="decimal-pad"
             onBlur={applyReferenceWeightChange}
@@ -191,7 +192,7 @@ export function FoodForm({
           {nutrients.map(({ key, label, unit }) => (
             <View key={key} style={styles.nutrientRow}>
               <Text style={styles.nutrientLabel}>{label}</Text>
-              <TextInput
+              <NumericTextInput
                 accessibilityLabel={label}
                 keyboardType="decimal-pad"
                 onChangeText={(value) => changeValue(key, value)}

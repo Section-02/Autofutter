@@ -19,11 +19,25 @@ type FetchFunction = (
 type UsdaClientOptions = Readonly<{
   apiKey?: string;
   fetchImpl?: FetchFunction;
+  retryDelaysMs?: readonly number[];
+  sleepImpl?: (milliseconds: number) => Promise<void>;
 }>;
+
+const DEFAULT_RETRY_DELAYS_MS = [350, 900] as const;
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 425 || status >= 500;
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 export class UsdaClient {
   private readonly apiKey: string;
   private readonly fetchImpl: FetchFunction;
+  private readonly retryDelaysMs: readonly number[];
+  private readonly sleepImpl: (milliseconds: number) => Promise<void>;
 
   constructor(options: UsdaClientOptions = {}) {
     this.apiKey =
@@ -31,6 +45,8 @@ export class UsdaClient {
       process.env.EXPO_PUBLIC_USDA_API_KEY?.trim() ||
       'DEMO_KEY';
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.retryDelaysMs = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
+    this.sleepImpl = options.sleepImpl ?? sleep;
   }
 
   private async request(
@@ -38,28 +54,49 @@ export class UsdaClient {
     dataType: readonly string[],
     pageSize: number,
   ): Promise<UsdaFoodCandidate[]> {
-    try {
-      const response = await this.fetchImpl(
-        `${USDA_SEARCH_URL}?api_key=${encodeURIComponent(this.apiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, dataType, pageSize }),
-        },
-      );
-      if (!response.ok) {
-        throw new UsdaSearchError(
-          response.status === 429
-            ? 'USDA search limit reached. Please try again later.'
-            : 'USDA search is temporarily unavailable.',
+    for (let attempt = 0; attempt <= this.retryDelaysMs.length; attempt += 1) {
+      let response: Response;
+      try {
+        response = await this.fetchImpl(
+          `${USDA_SEARCH_URL}?api_key=${encodeURIComponent(this.apiKey)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, dataType, pageSize }),
+          },
         );
+      } catch {
+        if (attempt < this.retryDelaysMs.length) {
+          await this.sleepImpl(this.retryDelaysMs[attempt]!);
+          continue;
+        }
+        throw new UsdaSearchError('USDA search requires an internet connection.');
       }
-      const body: unknown = await response.json();
-      return mapUsdaSearchResponse(body);
-    } catch (error) {
-      if (error instanceof UsdaSearchError) throw error;
-      throw new UsdaSearchError('USDA search requires an internet connection.');
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new UsdaSearchError('USDA search limit reached. Please try again later.');
+        }
+        if (isRetryableStatus(response.status) && attempt < this.retryDelaysMs.length) {
+          await this.sleepImpl(this.retryDelaysMs[attempt]!);
+          continue;
+        }
+        throw new UsdaSearchError('USDA search is temporarily unavailable.');
+      }
+
+      try {
+        const body: unknown = await response.json();
+        return mapUsdaSearchResponse(body);
+      } catch {
+        if (attempt < this.retryDelaysMs.length) {
+          await this.sleepImpl(this.retryDelaysMs[attempt]!);
+          continue;
+        }
+        throw new UsdaSearchError('USDA search is temporarily unavailable.');
+      }
     }
+
+    throw new UsdaSearchError('USDA search is temporarily unavailable.');
   }
 
   async search(query: string): Promise<UsdaFoodCandidate[]> {

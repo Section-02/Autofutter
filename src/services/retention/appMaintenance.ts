@@ -1,5 +1,4 @@
 import type { DatabaseConnection } from '@/data/database/types';
-import { backupRuntime } from '@/services/backup/backupRuntime';
 import { todayLocalDate } from '@/utils/dates';
 
 import { RetentionService } from './retentionService';
@@ -16,13 +15,10 @@ export function runAppMaintenance(): Promise<void> {
   if (running) return running;
   const connection = database;
   running = (async () => {
-    const deleted = await new RetentionService(connection).runIfNeeded(
+    await new RetentionService(connection).runIfNeeded(
       todayLocalDate(),
       new Date().toISOString(),
     );
-    if (deleted > 0) {
-      await backupRuntime.markDirty();
-    }
   })().finally(() => {
     running = null;
   });

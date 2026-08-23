@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import { IngredientPicker } from '@/components/recipe/IngredientPicker';
 import type { FoodRecord } from '@/data/repositories/foodRepository';
 import type { RecipeIngredientNutritionRecord, RecipeVariationOverrideRecord } from '@/data/repositories/recipeRepository';
@@ -84,14 +85,14 @@ export function VariationForm({ baseName, baseIngredients, initialName = '', ini
           <Text numberOfLines={2} style={[styles.foodName, line.removed && styles.removedText]}>{line.name}</Text>
           <Text style={styles.origin}>{line.baseId ? (line.foodId === line.originalFoodId ? 'Base ingredient' : 'Replacement') : 'Added ingredient'}</Text>
         </Pressable>
-        {!line.removed ? <><TextInput keyboardType="decimal-pad" onChangeText={(weight) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, weight } : item))} style={styles.weight} value={line.weight} /><Text style={styles.unit}>g</Text></> : null}
+        {!line.removed ? <><NumericTextInput onChangeText={(weight) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, weight } : item))} style={styles.weight} value={line.weight} /><Text style={styles.unit}>g</Text></> : null}
         <Pressable accessibilityLabel={line.removed ? `Restore ${line.name}` : `Remove ${line.name}`} hitSlop={8} onPress={() => line.baseId ? setLines((current) => current.map((item) => item.key === line.key ? { ...item, removed: !item.removed } : item)) : setLines((current) => current.filter((item) => item.key !== line.key))}>
           <SymbolView name={line.removed ? 'arrow.uturn.backward.circle' : 'minus.circle'} size={20} tintColor={line.removed ? colors.accent : colors.calorieOver} />
         </Pressable>
       </View>)}
       <Pressable onPress={() => setPicker({ visible: true })} style={styles.add}><Text style={styles.addText}>+ ADD INGREDIENT</Text></Pressable>
       <Text style={styles.section}>FINISHED WEIGHT</Text>
-      <View style={styles.finished}><TextInput keyboardType="decimal-pad" onChangeText={setFinishedWeight} placeholder="Required" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} /><Text style={styles.finishedUnit}>g</Text></View>
+      <View style={styles.finished}><NumericTextInput onChangeText={setFinishedWeight} placeholder="Required" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} /><Text style={styles.finishedUnit}>g</Text></View>
       <Text style={styles.help}>Weigh this finished version of the complete recipe.</Text>
       <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.save, (busy || pressed) && styles.dim]}><Text style={styles.saveText}>{busy ? 'SAVING…' : submitLabel}</Text></Pressable>
       {footer}

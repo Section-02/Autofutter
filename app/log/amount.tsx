@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import { NutritionFacts } from '@/components/nutrition/NutritionFacts';
 import { useAppDatabase } from '@/hooks/useAppDatabase';
 import type { LoggedNutrition } from '@/domain/nutrition/nutritionTypes';
@@ -80,9 +81,8 @@ export default function FoodAmountScreen() {
           <Text accessibilityRole="header" style={styles.title}>{source?.name.toUpperCase() ?? ''}</Text>
           <Text style={styles.prompt}>How much?</Text>
           <View style={styles.amountRow}>
-            <TextInput
+            <NumericTextInput
               autoFocus
-              keyboardType="decimal-pad"
               onChangeText={setAmount}
               placeholder="0"
               placeholderTextColor={colors.textMuted}

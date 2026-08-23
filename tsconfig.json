@@ -5,8 +5,7 @@
     "noUncheckedIndexedAccess": true,
     "types": ["jest", "node"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@modules/*": ["./modules/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -14,7 +13,6 @@
     "app/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "modules/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.tsx",
     ".expo/types/**/*.ts",

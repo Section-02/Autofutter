@@ -49,7 +49,7 @@ morality to food.
 -   Permanent daily nutrition history
 -   Permanent weight history
 -   Local SQLite database
--   Versioned iCloud flat-file backup/restore
+-   Versioned portable JSON flat-file backup/restore
 -   Soft delete for reusable foods and recipes
 -   Automated tests for math, persistence, retention, and critical
     workflows
@@ -446,7 +446,10 @@ Offline message:
 USDA search requires an internet connection.
 ```
 
-No offline USDA cache/database or retry queue.
+Retry a transient connection or USDA server failure up to two times with
+short delays before showing an error. Do not retry rate-limit or other
+non-transient responses. There is no offline USDA cache/database or
+background retry queue.
 
 Flow:
 
@@ -821,15 +824,21 @@ Calorie Target Range
 DATA
 
 Backup
-Up to date                 ›
+Create or restore          ›
 
 Deleted Items              ›
+
+Reset Data                 ›
 
 ABOUT
 
 App Version
 1.0.0
 ```
+
+Reset Data permanently erases all user data while preserving the app's
+database structure. Require explicit confirmation that clearly states
+the action cannot be undone before deleting anything.
 
 Do not add theme, units, meal settings, notifications, account,
 language, dashboard, or other preference clutter.
@@ -891,8 +900,8 @@ After Start, open Log.
 
 # 17. Backup & Restore
 
-SQLite on the iPhone is the working source of truth. iCloud is
-**backup/restore**, not live cloud sync.
+SQLite on the iPhone is the working source of truth. Backup and restore
+use manually saved portable JSON files, not cloud sync.
 
 Use a versioned portable JSON backup, not a raw SQLite copy.
 
@@ -912,7 +921,8 @@ Concept:
     "dailyNutrition": [],
     "foodLogs": [],
     "weighIns": [],
-    "goals": []
+    "goals": [],
+    "logDayCompletions": []
   }
 }
 ```
@@ -920,44 +930,23 @@ Concept:
 The format must be versioned, schema-validatable, portable,
 human-inspectable where practical, and complete.
 
-## Automatic backup
+## Create backup file
 
-SQLite mutations commit immediately. Backup is secondary and must never
-block successful logging.
+SQLite mutations commit immediately. Backup is a separate, manual action
+and must never block successful logging.
 
-After persistent changes:
+From Settings → Backup:
 
-1.  mark backup dirty;
-2.  debounce writes (about five seconds after the last mutation is
-    reasonable);
-3.  replace the current backup;
-4.  record last successful backup time/status.
+1.  create a complete versioned JSON document from a consistent database
+    snapshot;
+2.  validate the generated document;
+3.  open the supported iOS share sheet;
+4.  allow the user to save the file to any available Files location.
 
-Attempt pending backup when the app backgrounds when practical.
-
-Statuses: Up to date, Backup pending, Backup failed.
-
-A backup failure never rolls back successful local data.
-
-## iCloud implementation spike
-
-Before building the full backup feature, prove the selected Expo/iOS
-approach can:
-
-1.  create the backup in the app's iCloud document container;
-2.  read it;
-3.  overwrite the same logical backup later;
-4.  restore through supported iOS file/document APIs.
-
-Do not assume arbitrary iCloud Drive paths are writable through ordinary
-local filesystem APIs.
-
-Prefer supported Expo/iOS capabilities. If managed Expo APIs cannot
-satisfy automatic writable iCloud storage, isolate platform-specific
-code behind `BackupStorageProvider` and use the smallest reasonable iOS
-native/config-plugin solution.
-
-Do not create a backend just for backup.
+Do not require an app-owned iCloud container or paid Apple Developer
+capabilities. The user may choose iCloud Drive, On My iPhone, or another
+Files provider when available. Do not claim that a backup was saved merely
+because the share sheet was opened.
 
 ## Restore
 
@@ -1607,11 +1596,11 @@ Exit: charts are legible and performant on iPhone 11.
 
 ## Phase 8 --- Retention & Backup
 
-Three-month cleanup, summary preservation, JSON backup, restore
-validation/transaction, backup status. Complete iCloud persistence spike
-before full iCloud implementation.
+Three-month cleanup, summary preservation, portable JSON backup file,
+restore validation and transaction safety.
 
-Exit: retention and restore are safe and iCloud behavior is proven.
+Exit: retention and restore are safe; JSON export and import behavior is
+proven.
 
 ## Phase 9 --- QA
 

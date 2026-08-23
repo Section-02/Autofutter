@@ -51,26 +51,50 @@ describe('UsdaClient', () => {
   });
 
   it('uses the required offline message when the request cannot connect', async () => {
+    const fetchImpl = jest.fn(async () => {
+      throw new TypeError('Network request failed');
+    });
     const client = new UsdaClient({
       apiKey: 'test-key',
-      fetchImpl: async () => {
-        throw new TypeError('Network request failed');
-      },
+      fetchImpl,
+      retryDelaysMs: [0, 0],
+      sleepImpl: async () => undefined,
     });
 
     await expect(client.search('rice')).rejects.toEqual(
       new UsdaSearchError('USDA search requires an internet connection.'),
     );
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a temporary USDA failure before showing an error', async () => {
+    const sleepImpl = jest.fn(async () => undefined);
+    const fetchImpl = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockResolvedValueOnce(response({}, false, 503))
+      .mockResolvedValueOnce(response({ foods: [] }));
+    const client = new UsdaClient({
+      apiKey: 'test-key',
+      fetchImpl,
+      retryDelaysMs: [350, 900],
+      sleepImpl,
+    });
+
+    await expect(client.search('rice')).resolves.toEqual([]);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sleepImpl).toHaveBeenCalledWith(350);
   });
 
   it('reports the USDA rate limit without treating it as an offline failure', async () => {
+    const fetchImpl = jest.fn(async () => response({}, false, 429));
     const client = new UsdaClient({
       apiKey: 'test-key',
-      fetchImpl: async () => response({}, false, 429),
+      fetchImpl,
     });
 
     await expect(client.search('rice')).rejects.toThrow(
       'USDA search limit reached. Please try again later.',
     );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

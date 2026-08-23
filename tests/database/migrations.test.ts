@@ -26,7 +26,6 @@ describe('database migrations', () => {
     );
 
     expect(tables.map(({ name }) => name)).toEqual([
-      'backup_state',
       'daily_nutrition_summaries',
       'food_log_entries',
       'foods',

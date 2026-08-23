@@ -5,8 +5,6 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 
 import { adaptExpoDatabase, initializeExpoDatabase } from '@/data/database/database';
-import { backupRuntime } from '@/services/backup/backupRuntime';
-import { ICloudBackupStorageProvider } from '@/services/backup/iCloudBackupStorageProvider';
 import {
   configureAppMaintenance,
   runAppMaintenance,
@@ -16,7 +14,6 @@ import { colors } from '@/theme/colors';
 async function initializeApplicationDatabase(database: Parameters<typeof initializeExpoDatabase>[0]) {
   await initializeExpoDatabase(database);
   const connection = adaptExpoDatabase(database);
-  await backupRuntime.configure(connection, new ICloudBackupStorageProvider());
   configureAppMaintenance(connection);
   await runAppMaintenance();
 }
@@ -26,8 +23,6 @@ export default function RootLayout() {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void runAppMaintenance();
-      } else if (state === 'background') {
-        void backupRuntime.flushPending();
       }
     });
     return () => subscription.remove();

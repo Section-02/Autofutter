@@ -2,19 +2,9 @@ import { initializeDatabase } from '../../src/data/database/database';
 import { FoodRepository } from '../../src/data/repositories/foodRepository';
 import { parseBackupDocument } from '../../src/schemas/backup';
 import { BackupService } from '../../src/services/backup/backupService';
-import type { BackupStorageProvider } from '../../src/services/backup/backupStorageProvider';
 import { TestDatabase } from '../database/testDatabase';
 
 const timestamp = '2026-08-22T20:00:00.000Z';
-
-class MemoryBackupStorage implements BackupStorageProvider {
-  contents: string | null = null;
-  available = true;
-
-  async isAvailable(): Promise<boolean> { return this.available; }
-  async writeCurrentBackup(contents: string): Promise<void> { this.contents = contents; }
-  async readCurrentBackup(): Promise<string | null> { return this.contents; }
-}
 
 async function seed(database: TestDatabase, foodId = 'food'): Promise<void> {
   await new FoodRepository(database).create({
@@ -73,24 +63,21 @@ async function seed(database: TestDatabase, foodId = 'food'): Promise<void> {
 
 describe('BackupService', () => {
   let database: TestDatabase;
-  let storage: MemoryBackupStorage;
 
   beforeEach(async () => {
     database = new TestDatabase();
-    storage = new MemoryBackupStorage();
     await initializeDatabase(database);
   });
 
   afterEach(() => database.close());
 
-  it('serializes a versioned, complete, schema-valid backup and verifies its saved copy', async () => {
+  it('serializes a versioned, complete, schema-valid portable backup file', async () => {
     await seed(database);
-    const service = new BackupService(database, storage);
+    const service = new BackupService(database);
 
-    await service.writeCurrentBackup(timestamp);
+    const contents = await service.createBackupContents(timestamp);
 
-    expect(storage.contents).not.toBeNull();
-    const backup = parseBackupDocument(storage.contents!);
+    const backup = parseBackupDocument(contents);
     expect(backup).toMatchObject({
       format: 'personal-nutrition-tracker',
       version: 1,
@@ -106,7 +93,7 @@ describe('BackupService', () => {
 
   it('rejects corrupt and incompatible backups before changing data', async () => {
     await seed(database);
-    const service = new BackupService(database, storage);
+    const service = new BackupService(database);
 
     expect(() => service.preview('{broken')).toThrow('not valid JSON');
     expect(() => service.preview(JSON.stringify({
@@ -117,12 +104,12 @@ describe('BackupService', () => {
 
   it('restores all backed-up data transactionally', async () => {
     await seed(database);
-    const sourceService = new BackupService(database, storage);
+    const sourceService = new BackupService(database);
     const contents = JSON.stringify(await sourceService.createDocument(timestamp));
 
     const target = new TestDatabase();
     await initializeDatabase(target);
-    const targetService = new BackupService(target, new MemoryBackupStorage());
+    const targetService = new BackupService(target);
     await expect(targetService.restore(contents)).resolves.toMatchObject({
       foods: 1,
       detailedLogEntries: 1,
@@ -137,14 +124,14 @@ describe('BackupService', () => {
 
   it('rolls back a failed restore and preserves the current database', async () => {
     await seed(database);
-    const document = await new BackupService(database, storage).createDocument(timestamp);
-    document.data.goals.push({ ...document.data.goals[0]!, id: 'duplicate-goal' });
+    const document = await new BackupService(database).createDocument(timestamp);
+    document.data.foods.push({ ...document.data.foods[0]!, name: 'Duplicate food ID' });
     const target = new TestDatabase();
     await initializeDatabase(target);
     await seed(target, 'existing-food');
 
     await expect(
-      new BackupService(target, new MemoryBackupStorage()).restore(JSON.stringify(document)),
+      new BackupService(target).restore(JSON.stringify(document)),
     ).rejects.toThrow();
     expect(await target.getFirstAsync('SELECT * FROM foods WHERE id = ?;', 'existing-food')).not.toBeNull();
     expect(await target.getFirstAsync('SELECT * FROM food_log_entries WHERE id = ?;', 'log')).toMatchObject({

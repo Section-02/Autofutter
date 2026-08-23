@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import { IngredientPicker } from '@/components/recipe/IngredientPicker';
 import type { FoodRecord } from '@/data/repositories/foodRepository';
 import type { RecipeDraft, RecipeIngredientInput } from '@/services/recipes/recipeService';
@@ -100,7 +101,7 @@ export function RecipeForm({ initialValues, busy, submitLabel, onSubmit, footer 
               <Text numberOfLines={2} style={styles.ingredientNameText}>{ingredient.name}</Text>
               <Text style={styles.replace}>Tap to replace</Text>
             </Pressable>
-            <TextInput
+            <NumericTextInput
               accessibilityLabel={`${ingredient.name} weight in grams`}
               keyboardType="decimal-pad"
               onChangeText={(weight) => setIngredients((current) => current.map((item) => item.key === ingredient.key ? { ...item, weight } : item))}
@@ -121,7 +122,7 @@ export function RecipeForm({ initialValues, busy, submitLabel, onSubmit, footer 
 
         <Text style={styles.sectionTitle}>FINISHED WEIGHT</Text>
         <View style={styles.finishedRow}>
-          <TextInput keyboardType="decimal-pad" onChangeText={setFinishedWeight} placeholder="Optional" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} />
+          <NumericTextInput onChangeText={setFinishedWeight} placeholder="Optional" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} />
           <Text style={styles.finishedUnit}>g</Text>
         </View>
         <Text style={styles.help}>Weigh the complete cooked recipe. Leave blank to save it as Incomplete.</Text>

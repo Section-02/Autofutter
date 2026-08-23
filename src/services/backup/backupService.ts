@@ -6,8 +6,6 @@ import {
   type BackupDocument,
 } from '@/schemas/backup';
 
-import type { BackupStorageProvider } from './backupStorageProvider';
-
 export type BackupSummary = Readonly<{
   createdAt: string;
   foods: number;
@@ -19,10 +17,7 @@ export type BackupSummary = Readonly<{
 }>;
 
 export class BackupService {
-  constructor(
-    private readonly database: DatabaseConnection,
-    private readonly storage: BackupStorageProvider,
-  ) {}
+  constructor(private readonly database: DatabaseConnection) {}
 
   async createDocument(createdAt = new Date().toISOString()): Promise<BackupDocument> {
     let data: BackupDocument['data'] | null = null;
@@ -41,18 +36,11 @@ export class BackupService {
     return backupDocumentSchema.parse(document);
   }
 
-  async writeCurrentBackup(createdAt = new Date().toISOString()): Promise<void> {
-    if (!(await this.storage.isAvailable())) {
-      throw new Error('iCloud Drive is unavailable. Check iCloud Drive in Settings.');
-    }
+  async createBackupContents(createdAt = new Date().toISOString()): Promise<string> {
     const document = await this.createDocument(createdAt);
-    await this.storage.writeCurrentBackup(JSON.stringify(document, null, 2));
-
-    const saved = await this.storage.readCurrentBackup();
-    if (!saved) {
-      throw new Error('The iCloud backup could not be read after saving.');
-    }
-    parseBackupDocument(saved);
+    const contents = JSON.stringify(document, null, 2);
+    parseBackupDocument(contents);
+    return contents;
   }
 
   preview(contents: string): BackupSummary {

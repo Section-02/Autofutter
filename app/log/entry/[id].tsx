@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NumericTextInput } from '@/components/common/NumericTextInput';
 import { NutritionFacts } from '@/components/nutrition/NutritionFacts';
 import { QuickEntryForm } from '@/components/quick/QuickEntryForm';
 import { FoodLogRepository, type FoodLogEntryRecord } from '@/data/repositories/foodLogRepository';
@@ -66,7 +67,7 @@ export default function LogEntryEditorScreen() {
     <View style={styles.quickHeader}><Pressable accessibilityLabel="Back" hitSlop={12} onPress={router.back}><SymbolView name="chevron.left" size={20} tintColor={colors.text} /></Pressable></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{entry?.display_name_snapshot.toUpperCase() ?? ''}</Text><Text style={styles.label}>Amount</Text>
-      <View style={styles.amountRow}><TextInput keyboardType="decimal-pad" onChangeText={setAmount} selectTextOnFocus style={styles.amountInput} value={amount} /><Text style={styles.unit}>g</Text></View>
+      <View style={styles.amountRow}><NumericTextInput onChangeText={setAmount} selectTextOnFocus style={styles.amountInput} value={amount} /><Text style={styles.unit}>g</Text></View>
       {preview ? <View style={styles.preview}><Text style={styles.calories}>{preview.calories.toLocaleString()} kcal</Text><NutritionFacts nutrition={preview} /></View> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable onPress={deleteEntry} style={styles.deleteAction}><Text style={styles.deleteText}>Delete Entry</Text></Pressable>
