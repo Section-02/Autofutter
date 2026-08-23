@@ -26,6 +26,7 @@ describe('database migrations', () => {
     );
 
     expect(tables.map(({ name }) => name)).toEqual([
+      'backup_state',
       'daily_nutrition_summaries',
       'food_log_entries',
       'foods',
@@ -35,10 +36,11 @@ describe('database migrations', () => {
       'recipe_variation_overrides',
       'recipe_variations',
       'recipes',
+      'retention_state',
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(4);
+    expect(version?.version).toBe(5);
   });
 
   it('is idempotent after the latest migration has been applied', async () => {
@@ -49,7 +51,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(4);
+    expect(rows?.count).toBe(5);
   });
 
   it('rolls back a failed migration without recording its version', async () => {

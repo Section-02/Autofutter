@@ -11,11 +11,34 @@
     ],
     "ios": {
       "bundleIdentifier": "com.personalnutritiontracker.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "usesIcloudStorage": true,
+      "infoPlist": {
+        "NSUbiquitousContainers": {
+          "iCloud.com.personalnutritiontracker.app": {
+            "NSUbiquitousContainerIsDocumentScopePublic": true,
+            "NSUbiquitousContainerName": "Personal Nutrition Tracker",
+            "NSUbiquitousContainerSupportedFolderLevels": "ANY"
+          }
+        }
+      },
+      "entitlements": {
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.personalnutritiontracker.app"
+        ],
+        "com.apple.developer.icloud-services": [
+          "CloudDocuments"
+        ],
+        "com.apple.developer.ubiquity-container-identifiers": [
+          "iCloud.com.personalnutritiontracker.app"
+        ],
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.personalnutritiontracker.app"
+      }
     },
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "expo-document-picker",
       [
         "expo-splash-screen",
         {

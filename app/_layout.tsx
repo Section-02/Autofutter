@@ -1,13 +1,40 @@
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 
-import { initializeExpoDatabase } from '@/data/database/database';
+import { adaptExpoDatabase, initializeExpoDatabase } from '@/data/database/database';
+import { backupRuntime } from '@/services/backup/backupRuntime';
+import { ICloudBackupStorageProvider } from '@/services/backup/iCloudBackupStorageProvider';
+import {
+  configureAppMaintenance,
+  runAppMaintenance,
+} from '@/services/retention/appMaintenance';
 import { colors } from '@/theme/colors';
 
+async function initializeApplicationDatabase(database: Parameters<typeof initializeExpoDatabase>[0]) {
+  await initializeExpoDatabase(database);
+  const connection = adaptExpoDatabase(database);
+  await backupRuntime.configure(connection, new ICloudBackupStorageProvider());
+  configureAppMaintenance(connection);
+  await runAppMaintenance();
+}
+
 export default function RootLayout() {
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void runAppMaintenance();
+      } else if (state === 'background') {
+        void backupRuntime.flushPending();
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   return (
-    <SQLiteProvider databaseName="nutrition-tracker.db" onInit={initializeExpoDatabase}>
+    <SQLiteProvider databaseName="nutrition-tracker.db" onInit={initializeApplicationDatabase}>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
