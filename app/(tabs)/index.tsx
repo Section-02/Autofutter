@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DateNavigator } from '@/components/log/DateNavigator';
@@ -62,6 +63,9 @@ export default function LogScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>LOG</Text>
+        <Pressable accessibilityLabel="Settings" hitSlop={12} style={styles.settingsButton} onPress={() => router.push('/settings')}>
+          <SymbolView name="gearshape" size={21} tintColor={colors.textMuted} />
+        </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <DateNavigator date={selectedDate} onChange={setSelectedDate} />
@@ -109,7 +113,7 @@ export default function LogScreen() {
           }
           style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
         >
-          <Text style={styles.addButtonText}>+ ADD FOOD</Text>
+          <Text style={styles.addButtonText}>+ ADD TO LOG</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -118,7 +122,8 @@ export default function LogScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.md },
+  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.md },
+  settingsButton: { marginRight: 48 },
   title: { color: colors.text, fontSize: 24, fontWeight: '700', letterSpacing: 0.5 },
   scrollContent: { paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.xl },
   error: { color: colors.calorieOver, textAlign: 'center' },

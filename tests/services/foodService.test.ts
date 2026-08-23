@@ -122,4 +122,18 @@ describe('FoodService', () => {
       deleted_at: null,
     });
   });
+  it('permanently deletes only unreferenced deleted foods', async () => {
+    await service.create(input());
+    await service.softDelete('food-id');
+    await service.permanentlyDelete('food-id');
+    await expect(new FoodRepository(database).findById('food-id')).resolves.toBeNull();
+  });
+
+  it('blocks permanent food deletion while a deleted recipe still references it', async () => {
+    await service.create(input());
+    await database.runAsync(`INSERT INTO recipes (id, name, finished_weight_g, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?);`, 'recipe-id', 'Chicken Soup', 1000, now.toISOString(), now.toISOString(), now.toISOString());
+    await database.runAsync(`INSERT INTO recipe_ingredients (id, recipe_id, food_id, weight_g, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);`, 'ingredient-id', 'recipe-id', 'food-id', 500, 0, now.toISOString(), now.toISOString());
+    await service.softDelete('food-id');
+    await expect(service.permanentlyDelete('food-id')).rejects.toEqual(new FoodInUseError(['Chicken Soup']));
+  });
 });

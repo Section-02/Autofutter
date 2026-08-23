@@ -118,6 +118,26 @@ export class FoodLogRepository {
     );
   }
 
+  async updateQuickEntry(entry: FoodLogEntryRecord): Promise<void> {
+    await this.database.runAsync(
+      `UPDATE food_log_entries
+       SET display_name_snapshot = ?, calories = ?, protein_g = ?, fat_g = ?,
+           carbs_g = ?, sodium_mg = ?, cholesterol_mg = ?, is_estimated = ?,
+           updated_at = ?
+       WHERE id = ? AND entry_type = 'quick';`,
+      entry.display_name_snapshot,
+      entry.calories,
+      entry.protein_g,
+      entry.fat_g,
+      entry.carbs_g,
+      entry.sodium_mg,
+      entry.cholesterol_mg,
+      entry.is_estimated,
+      entry.updated_at,
+      entry.id,
+    );
+  }
+
   async deleteById(id: string): Promise<void> {
     await this.database.runAsync(
       'DELETE FROM food_log_entries WHERE id = ?;',

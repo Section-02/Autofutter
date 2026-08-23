@@ -395,6 +395,17 @@ export class RecipeService {
     });
   }
 
+  async permanentlyDelete(recipeId: string): Promise<void> {
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const repository = new RecipeRepository(transaction);
+      const recipe = await repository.findById(recipeId);
+      if (recipe === null || recipe.deleted_at === null) {
+        throw new Error('Only deleted recipes can be permanently deleted.');
+      }
+      await repository.hardDelete(recipeId);
+    });
+  }
+
   async listVariations(recipeId: string): Promise<RecipeVariationRecord[]> {
     return new RecipeRepository(this.database).listVariations(recipeId);
   }

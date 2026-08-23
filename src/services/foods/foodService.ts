@@ -169,6 +169,19 @@ export class FoodService {
     });
   }
 
+  async permanentlyDelete(id: string): Promise<void> {
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const repository = new FoodRepository(transaction);
+      const food = await repository.findById(id);
+      if (food === null || food.deleted_at === null) {
+        throw new Error('Only deleted foods can be permanently deleted.');
+      }
+      const recipeNames = await repository.listAllRecipeReferences(id);
+      if (recipeNames.length > 0) throw new FoodInUseError(recipeNames);
+      await repository.hardDelete(id);
+    });
+  }
+
   async restore(id: string): Promise<void> {
     const food = await this.find(id);
     if (food.deleted_at === null) return;

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { CalorieGaugeState } from '@/domain/nutrition/calorieGaugeCalculator';
 import { colors } from '@/theme/colors';
@@ -8,15 +8,14 @@ const CENTER_X = 140;
 const CENTER_Y = 125;
 const RADIUS = 100;
 const START_ANGLE = 150;
-const NORMAL_DEGREES = 240;
-const EXTENSION_DEGREES = 30;
+const GREEN_END_ANGLE = 330;
+const YELLOW_END_ANGLE = 375;
+const RED_END_ANGLE = 390;
+const STROKE_WIDTH = 16;
 
 function point(angle: number): { x: number; y: number } {
   const radians = (angle * Math.PI) / 180;
-  return {
-    x: CENTER_X + RADIUS * Math.cos(radians),
-    y: CENTER_Y + RADIUS * Math.sin(radians),
-  };
+  return { x: CENTER_X + RADIUS * Math.cos(radians), y: CENTER_Y + RADIUS * Math.sin(radians) };
 }
 
 function arc(startAngle: number, endAngle: number): string {
@@ -27,55 +26,41 @@ function arc(startAngle: number, endAngle: number): string {
   return `M ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
+function progressEnd(start: number, end: number, progress: number): number {
+  return start + (end - start) * Math.max(0, Math.min(progress, 1));
+}
+
 type CalorieGaugeProps = { state: CalorieGaugeState };
 
 export function CalorieGauge({ state }: CalorieGaugeProps) {
-  const normalEnd = START_ANGLE + NORMAL_DEGREES * state.normalProgress;
-  const extensionProgress = Math.min(
-    state.redExtensionCalories / state.range.target,
-    1,
-  );
-  const normalColor =
-    state.normalArcColor === 'green' ? colors.calorieBelow : colors.calorieWithin;
+  const { consumedCalories, range } = state;
+  const greenProgress = range.lower === 0 ? 1 : consumedCalories / range.lower;
+  const toleranceWidth = range.upper - range.lower;
+  const yellowProgress = toleranceWidth === 0
+    ? consumedCalories >= range.target ? 1 : 0
+    : (consumedCalories - range.lower) / toleranceWidth;
+  const redScale = Math.max(range.upper - range.target, range.target * 0.1, 1);
+  const redProgress = (consumedCalories - range.upper) / redScale;
+  const redEnd = progressEnd(YELLOW_END_ANGLE, RED_END_ANGLE, redProgress);
+  const redEndPoint = point(redEnd);
 
   return (
     <View style={styles.container} accessibilityLabel="Daily calorie gauge">
       <Svg width="100%" height={210} viewBox="0 0 280 210">
-        <Path
-          d={arc(START_ANGLE, START_ANGLE + NORMAL_DEGREES)}
-          fill="none"
-          stroke={colors.border}
-          strokeLinecap="round"
-          strokeWidth={16}
-        />
-        {state.normalProgress > 0 ? (
-          <Path
-            d={arc(START_ANGLE, normalEnd)}
-            fill="none"
-            stroke={normalColor}
-            strokeLinecap="round"
-            strokeWidth={16}
-          />
-        ) : null}
-        {extensionProgress > 0 ? (
-          <Path
-            d={arc(
-              START_ANGLE + NORMAL_DEGREES,
-              START_ANGLE + NORMAL_DEGREES + EXTENSION_DEGREES * extensionProgress,
-            )}
-            fill="none"
-            stroke={colors.calorieOver}
-            strokeLinecap="round"
-            strokeWidth={16}
-          />
+        <Path d={arc(START_ANGLE, RED_END_ANGLE)} fill="none" stroke={colors.border} strokeLinecap="round" strokeWidth={STROKE_WIDTH} />
+        {greenProgress > 0 ? <Path d={arc(START_ANGLE, progressEnd(START_ANGLE, GREEN_END_ANGLE, greenProgress))} fill="none" stroke={colors.calorieBelow} strokeLinecap="round" strokeWidth={STROKE_WIDTH} /> : null}
+        {yellowProgress > 0 ? <Path d={arc(GREEN_END_ANGLE, progressEnd(GREEN_END_ANGLE, YELLOW_END_ANGLE, yellowProgress))} fill="none" stroke={colors.calorieWithin} strokeWidth={STROKE_WIDTH} /> : null}
+        {redProgress > 0 ? (
+          <>
+            <Path d={arc(YELLOW_END_ANGLE, redEnd)} fill="none" stroke={colors.calorieOver} strokeWidth={STROKE_WIDTH} />
+            <Circle cx={redEndPoint.x} cy={redEndPoint.y} fill={colors.calorieOver} r={STROKE_WIDTH / 2} />
+          </>
         ) : null}
       </Svg>
       <View style={styles.centerText}>
         <Text style={styles.balance}>{Math.round(state.balance.calories).toLocaleString()}</Text>
         <Text style={styles.balanceLabel}>{state.balance.kind.toUpperCase()}</Text>
-        <Text style={styles.total}>
-          {state.consumedCalories.toLocaleString()} / {state.range.target.toLocaleString()} kcal
-        </Text>
+        <Text style={styles.total}>{state.consumedCalories.toLocaleString()} / {state.range.target.toLocaleString()} kcal</Text>
       </View>
     </View>
   );

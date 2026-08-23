@@ -7,6 +7,6 @@ export const colors = {
   accent: '#6F3598',
   accentSoft: '#EADCF3',
   calorieBelow: '#2E7D4F',
-  calorieWithin: '#C56B1A',
+  calorieWithin: '#D19A00',
   calorieOver: '#B43B3B',
 } as const;

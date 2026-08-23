@@ -1,0 +1,8 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+export default function DeletedItemsScreen() { const router = useRouter(); return <SafeAreaView style={styles.safeArea}><View style={styles.header}><Pressable accessibilityLabel="Back" hitSlop={12} onPress={router.back}><SymbolView name="chevron.left" size={20} tintColor={colors.text} /></Pressable><Text style={styles.title}>DELETED ITEMS</Text><View style={styles.spacer} /></View><View style={styles.content}><Pressable onPress={() => router.push('/foods/deleted')} style={styles.row}><Text style={styles.label}>Foods</Text><SymbolView name="chevron.right" size={15} tintColor={colors.textMuted} /></Pressable><Pressable onPress={() => router.push('/recipes/deleted')} style={styles.row}><Text style={styles.label}>Recipes</Text><SymbolView name="chevron.right" size={15} tintColor={colors.textMuted} /></Pressable></View></SafeAreaView>; }
+const styles = StyleSheet.create({ safeArea: { backgroundColor: colors.background, flex: 1 }, header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg }, title: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.8 }, spacer: { width: 20 }, content: { paddingHorizontal: spacing.screenHorizontal }, row: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 60 }, label: { color: colors.text, flex: 1, fontSize: 16, fontWeight: '600' } });

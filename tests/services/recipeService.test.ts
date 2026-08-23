@@ -209,4 +209,12 @@ describe('RecipeService', () => {
       isComplete: true,
     });
   });
+  it('permanently deletes a deleted recipe and its variation structure', async () => {
+    const recipe = await service.create({ name: 'Chili', finishedWeightG: 900, ingredients: [{ foodId: 'beef', weightG: 500 }] });
+    await service.createVariation(recipe.recipe.id, { name: 'Lean', finishedWeightG: 850, overrides: [{ action: 'change_weight', baseIngredientId: recipe.ingredients[0]!.id, weightG: 400 }] });
+    await service.softDelete(recipe.recipe.id);
+    await service.permanentlyDelete(recipe.recipe.id);
+    await expect(new RecipeRepository(database).findById(recipe.recipe.id)).resolves.toBeNull();
+    await expect(new FoodRepository(database).findById('beef')).resolves.not.toBeNull();
+  });
 });

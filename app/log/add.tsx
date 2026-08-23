@@ -141,6 +141,9 @@ export default function AddFoodScreen() {
           style={styles.search}
           value={query}
         />
+        <Pressable onPress={() => router.push({ pathname: '/log/quick-entry', params: { date } })} style={({ pressed }) => [styles.quickEntry, pressed && styles.pressed]}>
+          <Text style={styles.quickEntryText}>+ Restaurant / Quick Entry</Text>
+        </Pressable>
 
         {trimmedQuery === '' ? (
           <>
@@ -158,7 +161,7 @@ export default function AddFoodScreen() {
           <>
             <Text style={styles.sectionTitle}>RESULTS</Text>
             {results.map(resultRow)}
-            {results.length === 0 ? <Text style={styles.empty}>{`No foods or recipes found for ""`}</Text> : null}
+            {results.length === 0 ? <Text style={styles.empty}>{'No foods or recipes found for "' + trimmedQuery + '"'}</Text> : null}
           </>
         )}
 
@@ -182,6 +185,8 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 20 },
   content: { paddingHorizontal: spacing.screenHorizontal, paddingBottom: spacing.xxl },
   search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, color: colors.text, paddingHorizontal: spacing.md, fontSize: 16 },
+  quickEntry: { alignItems: 'center', borderColor: colors.accent, borderRadius: 10, borderWidth: 1, justifyContent: 'center', marginTop: spacing.md, minHeight: 46 },
+  quickEntryText: { color: colors.accent, fontSize: 14, fontWeight: '800' },
   sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, marginTop: spacing.xl, marginBottom: spacing.sm },
   result: { minHeight: 58, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   resultText: { flex: 1 },

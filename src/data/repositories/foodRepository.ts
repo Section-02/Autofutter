@@ -179,6 +179,28 @@ export class FoodRepository {
     return rows.map(({ name }) => name);
   }
 
+  async listAllRecipeReferences(id: string): Promise<string[]> {
+    const rows = await this.database.getAllAsync<{ name: string }>(
+      `SELECT DISTINCT recipes.name
+       FROM recipe_ingredients
+       JOIN recipes ON recipes.id = recipe_ingredients.recipe_id
+       WHERE recipe_ingredients.food_id = ?
+       UNION
+       SELECT DISTINCT recipes.name
+       FROM recipe_variation_overrides
+       JOIN recipe_variations ON recipe_variations.id = recipe_variation_overrides.variation_id
+       JOIN recipes ON recipes.id = recipe_variations.recipe_id
+       WHERE recipe_variation_overrides.food_id = ?
+       ORDER BY name COLLATE NOCASE;`,
+      id, id,
+    );
+    return rows.map(({ name }) => name);
+  }
+
+  async hardDelete(id: string): Promise<void> {
+    await this.database.runAsync('DELETE FROM foods WHERE id = ? AND deleted_at IS NOT NULL;', id);
+  }
+
   async softDelete(id: string, deletedAt: string): Promise<void> {
     await this.database.runAsync(
       `UPDATE foods

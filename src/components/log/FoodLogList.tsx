@@ -23,7 +23,7 @@ export function FoodLogList({ entries, onPressEntry }: FoodLogListProps) {
           onPress={() => onPressEntry(entry.id)}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
-          <Text numberOfLines={2} style={styles.name}>{entry.display_name_snapshot}</Text>
+          <Text numberOfLines={2} style={styles.name}>{entry.display_name_snapshot}{entry.is_estimated === 1 ? ' · Estimated' : ''}</Text>
           <Text style={styles.amount}>{entry.amount_g === null ? '' : `${entry.amount_g.toLocaleString()} g`}</Text>
           <Text style={styles.calories}>{entry.calories.toLocaleString()}</Text>
         </Pressable>

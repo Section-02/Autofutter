@@ -243,6 +243,18 @@ export class RecipeRepository {
     );
   }
 
+  async hardDelete(id: string): Promise<void> {
+    await this.database.runAsync(
+      `DELETE FROM recipe_variations WHERE recipe_id = ?;`, id,
+    );
+    await this.database.runAsync(
+      `DELETE FROM recipe_ingredients WHERE recipe_id = ?;`, id,
+    );
+    await this.database.runAsync(
+      `DELETE FROM recipes WHERE id = ? AND deleted_at IS NOT NULL;`, id,
+    );
+  }
+
   async searchLoggable(query: string, limit = 30): Promise<RecipeRecord[]> {
     return this.database.getAllAsync<RecipeRecord>(
       `SELECT r.* FROM recipes r

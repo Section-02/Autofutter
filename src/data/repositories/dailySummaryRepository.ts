@@ -30,11 +30,11 @@ export class DailySummaryRepository {
        )
        SELECT
          ?, COALESCE(SUM(calories), 0),
-         CASE WHEN COUNT(*) = COUNT(protein_g) THEN COALESCE(SUM(protein_g), 0) ELSE NULL END,
-         CASE WHEN COUNT(*) = COUNT(fat_g) THEN COALESCE(SUM(fat_g), 0) ELSE NULL END,
-         CASE WHEN COUNT(*) = COUNT(carbs_g) THEN COALESCE(SUM(carbs_g), 0) ELSE NULL END,
-         CASE WHEN COUNT(*) = COUNT(sodium_mg) THEN COALESCE(SUM(sodium_mg), 0) ELSE NULL END,
-         CASE WHEN COUNT(*) = COUNT(cholesterol_mg) THEN COALESCE(SUM(cholesterol_mg), 0) ELSE NULL END,
+         CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(protein_g) END,
+         CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(fat_g) END,
+         CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(carbs_g) END,
+         CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(sodium_mg) END,
+         CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(cholesterol_mg) END,
          CASE WHEN COUNT(*) = COUNT(protein_g)
                    AND COUNT(*) = COUNT(fat_g)
                    AND COUNT(*) = COUNT(carbs_g)
