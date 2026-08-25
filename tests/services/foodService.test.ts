@@ -23,6 +23,7 @@ function input(name = 'Chicken Breast'): FoodInput {
       cholesterolMg: 128.2,
     },
     source: { type: 'custom', id: null },
+    standardPortion: null,
   };
 }
 
@@ -76,6 +77,37 @@ describe('FoodService', () => {
       nutrition: { ...input().nutrition, sodiumMg: 0, cholesterolMg: 0 },
     });
     expect(created).toMatchObject({ sodium_mg: 0, cholesterol_mg: 0 });
+  });
+
+  it('creates, trims, updates, and removes an optional standard portion', async () => {
+    const created = await service.create({
+      ...input('String Cheese'),
+      standardPortion: { label: '  stick  ', weightG: 28 },
+    });
+    expect(created).toMatchObject({
+      standard_portion_label: 'stick',
+      standard_portion_weight_g: 28,
+    });
+
+    const updated = await service.update(created.id, {
+      ...input('String Cheese'),
+      standardPortion: null,
+    });
+    expect(updated).toMatchObject({
+      standard_portion_label: null,
+      standard_portion_weight_g: null,
+    });
+  });
+
+  it('requires a complete positive standard portion when one is provided', async () => {
+    await expect(service.create({
+      ...input(),
+      standardPortion: { label: '', weightG: 28 },
+    })).rejects.toThrow('Standard portion name is required.');
+    await expect(service.create({
+      ...input(),
+      standardPortion: { label: 'stick', weightG: 0 },
+    })).rejects.toThrow('Standard portion weight must be greater than zero.');
   });
 
   it('soft deletes and restores a food', async () => {

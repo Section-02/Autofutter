@@ -28,6 +28,8 @@ function food(id: string, name: string, calories: number): NewFoodRecord {
     source_id: null,
     created_at: timestamp,
     updated_at: timestamp,
+    standard_portion_label: null,
+    standard_portion_weight_g: null,
   };
 }
 

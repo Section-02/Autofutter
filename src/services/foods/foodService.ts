@@ -13,11 +13,17 @@ export type FoodSource = Readonly<{
   id: string | null;
 }>;
 
+export type StandardPortion = Readonly<{
+  label: string;
+  weightG: number;
+}>;
+
 export type FoodInput = Readonly<{
   name: string;
   referenceWeightG: number;
   nutrition: Nutrition;
   source: FoodSource;
+  standardPortion: StandardPortion | null;
 }>;
 
 type FoodServiceOptions = Readonly<{
@@ -65,7 +71,16 @@ export function validateFoodInput(input: FoodInput): FoodInput {
   if (input.source.type === 'usda' && !input.source.id) {
     throw new FoodValidationError('USDA source identifier is required.');
   }
-  return { ...input, name };
+  let standardPortion: StandardPortion | null = null;
+  if (input.standardPortion !== null) {
+    const label = input.standardPortion.label.trim();
+    if (label.length === 0) {
+      throw new FoodValidationError('Standard portion name is required.');
+    }
+    validateNumber(input.standardPortion.weightG, 'Standard portion weight', true);
+    standardPortion = { label, weightG: input.standardPortion.weightG };
+  }
+  return { ...input, name, standardPortion };
 }
 
 export class FoodService {
@@ -114,6 +129,8 @@ export class FoodService {
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,
+      standard_portion_label: valid.standardPortion?.label ?? null,
+      standard_portion_weight_g: valid.standardPortion?.weightG ?? null,
     };
     await new FoodRepository(this.database).create(food);
     return food;
@@ -140,6 +157,8 @@ export class FoodService {
       carbs_g: valid.nutrition.carbsG,
       sodium_mg: valid.nutrition.sodiumMg,
       cholesterol_mg: valid.nutrition.cholesterolMg,
+      standard_portion_label: valid.standardPortion?.label ?? null,
+      standard_portion_weight_g: valid.standardPortion?.weightG ?? null,
       updated_at: timestamp,
     });
     return {
@@ -152,6 +171,8 @@ export class FoodService {
       carbs_g: valid.nutrition.carbsG,
       sodium_mg: valid.nutrition.sodiumMg,
       cholesterol_mg: valid.nutrition.cholesterolMg,
+      standard_portion_label: valid.standardPortion?.label ?? null,
+      standard_portion_weight_g: valid.standardPortion?.weightG ?? null,
       updated_at: timestamp,
     };
   }

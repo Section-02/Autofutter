@@ -21,6 +21,8 @@ async function seed(database: TestDatabase, foodId = 'food'): Promise<void> {
     source_id: null,
     created_at: timestamp,
     updated_at: timestamp,
+    standard_portion_label: 'piece',
+    standard_portion_weight_g: 28,
   });
   await database.runAsync(
     `INSERT INTO food_log_entries (
@@ -80,7 +82,7 @@ describe('BackupService', () => {
     const backup = parseBackupDocument(contents);
     expect(backup).toMatchObject({
       format: 'personal-nutrition-tracker',
-      version: 1,
+      version: 2,
       createdAt: timestamp,
     });
     expect(backup.data.foods).toHaveLength(1);
@@ -89,6 +91,10 @@ describe('BackupService', () => {
     expect(backup.data.weighIns).toHaveLength(1);
     expect(backup.data.goals).toHaveLength(1);
     expect(backup.data.logDayCompletions).toHaveLength(1);
+    expect(backup.data.foods[0]).toMatchObject({
+      standard_portion_label: 'piece',
+      standard_portion_weight_g: 28,
+    });
   });
 
   it('rejects corrupt and incompatible backups before changing data', async () => {
@@ -100,6 +106,26 @@ describe('BackupService', () => {
       format: 'personal-nutrition-tracker', version: 99, createdAt: timestamp, data: {},
     }))).toThrow('version is not supported');
     expect(await database.getFirstAsync('SELECT * FROM foods WHERE id = ?;', 'food')).not.toBeNull();
+  });
+
+  it('rejects a backup with an incomplete standard portion', async () => {
+    await seed(database);
+    const service = new BackupService(database);
+    const document = await service.createDocument(timestamp);
+    const invalid = {
+      ...document,
+      data: {
+        ...document.data,
+        foods: document.data.foods.map((food) => ({
+          ...food,
+          standard_portion_weight_g: null,
+        })),
+      },
+    };
+
+    expect(() => service.preview(JSON.stringify(invalid))).toThrow(
+      'incomplete or invalid',
+    );
   });
 
   it('restores all backed-up data transactionally', async () => {
@@ -117,9 +143,38 @@ describe('BackupService', () => {
       weighIns: 1,
     });
     expect(await target.getFirstAsync('SELECT * FROM foods WHERE id = ?;', 'food')).not.toBeNull();
+    expect(await target.getFirstAsync('SELECT * FROM foods WHERE id = ?;', 'food')).toMatchObject({
+      standard_portion_label: 'piece',
+      standard_portion_weight_g: 28,
+    });
     expect(await target.getFirstAsync('SELECT * FROM food_log_entries WHERE id = ?;', 'log')).not.toBeNull();
     expect(await target.getFirstAsync('SELECT * FROM log_day_completions WHERE date = ?;', '2026-08-22')).not.toBeNull();
     target.close();
+  });
+
+  it('upgrades a version 1 backup with foods that have no standard portion', async () => {
+    await seed(database);
+    const current = await new BackupService(database).createDocument(timestamp);
+    const legacyFoods = current.data.foods.map((food) => {
+      const {
+        standard_portion_label: _label,
+        standard_portion_weight_g: _weight,
+        ...legacyFood
+      } = food;
+      return legacyFood;
+    });
+    const legacy = {
+      ...current,
+      version: 1,
+      data: { ...current.data, foods: legacyFoods },
+    };
+
+    const parsed = parseBackupDocument(JSON.stringify(legacy));
+    expect(parsed.version).toBe(2);
+    expect(parsed.data.foods[0]).toMatchObject({
+      standard_portion_label: null,
+      standard_portion_weight_g: null,
+    });
   });
 
   it('rolls back a failed restore and preserves the current database', async () => {

@@ -34,6 +34,8 @@ describe('FoodRepository', () => {
       source_id: null,
       created_at: '2026-08-21T12:00:00.000Z',
       updated_at: '2026-08-21T12:00:00.000Z',
+      standard_portion_label: null,
+      standard_portion_weight_g: null,
     };
 
     await repository.create(food);
@@ -43,5 +45,43 @@ describe('FoodRepository', () => {
 
   it('uses a bound id parameter when reading', async () => {
     await expect(repository.findById("' OR 1 = 1 --")).resolves.toBeNull();
+  });
+
+  it('persists an optional standard portion', async () => {
+    const food: NewFoodRecord = {
+      id: 'portion-food',
+      name: 'String Cheese',
+      reference_weight_g: 28,
+      calories: 80,
+      protein_g: 7,
+      fat_g: 6,
+      carbs_g: 1,
+      sodium_mg: 200,
+      cholesterol_mg: 15,
+      source_type: 'custom',
+      source_id: null,
+      created_at: '2026-08-21T12:00:00.000Z',
+      updated_at: '2026-08-21T12:00:00.000Z',
+      standard_portion_label: 'stick',
+      standard_portion_weight_g: 28,
+    };
+
+    await repository.create(food);
+    await expect(repository.findById(food.id)).resolves.toMatchObject({
+      standard_portion_label: 'stick',
+      standard_portion_weight_g: 28,
+    });
+  });
+
+  it('installs standard portion pairing integrity triggers', async () => {
+    const triggers = await database.getAllAsync<{ name: string }>(
+      `SELECT name FROM sqlite_master
+       WHERE type = 'trigger' AND name LIKE 'foods_standard_portion_%'
+       ORDER BY name;`,
+    );
+    expect(triggers.map(({ name }) => name)).toEqual([
+      'foods_standard_portion_insert_check',
+      'foods_standard_portion_update_check',
+    ]);
   });
 });

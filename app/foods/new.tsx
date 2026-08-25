@@ -48,6 +48,8 @@ export default function NewFoodScreen() {
     carbsG: optionalNumber(first(params.carbsG)),
     sodiumMg: optionalNumber(first(params.sodiumMg)),
     cholesterolMg: optionalNumber(first(params.cholesterolMg)),
+    standardPortionLabel: '',
+    standardPortionWeightG: null,
   };
 
   const create = async (values: FoodFormSubmission) =>

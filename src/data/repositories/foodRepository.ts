@@ -17,6 +17,8 @@ export type FoodRecord = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  standard_portion_label: string | null;
+  standard_portion_weight_g: number | null;
 };
 
 export type NewFoodRecord = Omit<
@@ -36,6 +38,8 @@ export type FoodUpdate = Pick<
   | 'carbs_g'
   | 'sodium_mg'
   | 'cholesterol_mg'
+  | 'standard_portion_label'
+  | 'standard_portion_weight_g'
   | 'updated_at'
 >;
 
@@ -50,8 +54,9 @@ export class FoodRepository {
     await this.database.runAsync(
       `INSERT INTO foods (
         id, name, reference_weight_g, calories, protein_g, fat_g, carbs_g,
-        sodium_mg, cholesterol_mg, source_type, source_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        sodium_mg, cholesterol_mg, source_type, source_id, created_at, updated_at,
+        standard_portion_label, standard_portion_weight_g
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       food.id,
       food.name,
       food.reference_weight_g,
@@ -65,6 +70,8 @@ export class FoodRepository {
       food.source_id,
       food.created_at,
       food.updated_at,
+      food.standard_portion_label,
+      food.standard_portion_weight_g,
     );
   }
 
@@ -134,7 +141,8 @@ export class FoodRepository {
     await this.database.runAsync(
       `UPDATE foods SET
         name = ?, reference_weight_g = ?, calories = ?, protein_g = ?,
-        fat_g = ?, carbs_g = ?, sodium_mg = ?, cholesterol_mg = ?, updated_at = ?
+        fat_g = ?, carbs_g = ?, sodium_mg = ?, cholesterol_mg = ?,
+        standard_portion_label = ?, standard_portion_weight_g = ?, updated_at = ?
        WHERE id = ? AND deleted_at IS NULL;`,
       food.name,
       food.reference_weight_g,
@@ -144,6 +152,8 @@ export class FoodRepository {
       food.carbs_g,
       food.sodium_mg,
       food.cholesterol_mg,
+      food.standard_portion_label,
+      food.standard_portion_weight_g,
       food.updated_at,
       id,
     );

@@ -34,6 +34,7 @@ morality to food.
 -   Gram-based food entry
 -   Local reusable food library
 -   Custom foods
+-   Optional standard portions for reusable foods
 -   USDA FoodData Central lookup
 -   Recipes built from weighted foods
 -   Recipe variations for substitutions
@@ -336,6 +337,12 @@ Auto-focus the gram field with numeric keyboard.
 
 Normal path: **Select → type grams → Add → return to Log.**
 
+If a Food has a standard portion, offer a compact choice between direct
+grams and that portion. For example, `1 stick = 28 g`. A portion count
+is converted to grams before using the existing nutrition calculation
+and log storage. Direct gram entry always remains available. Recipes do
+not require standard portions.
+
 ------------------------------------------------------------------------
 
 # 6. Foods
@@ -399,6 +406,17 @@ Cholesterol    [ 128 ] mg
 
 All six values are required for reusable Foods. A true zero is entered
 as 0. Reference weight must be positive.
+
+Foods may also define one optional standard portion in the shared form:
+
+``` text
+STANDARD PORTION (OPTIONAL)
+1 [ stick ] = [ 28 ] g
+```
+
+The portion label and positive gram weight must be supplied together.
+Existing Foods and Foods that do not need a standard portion leave both
+values blank.
 
 Source values may contain decimals.
 
@@ -682,6 +700,12 @@ visible rows add exactly to the visible daily total.
 
 **requested weight / reference weight × source nutrient value**
 
+When a standard portion is used, first calculate:
+
+**portion count × standard portion weight = requested weight in grams**
+
+Grams remain the canonical stored and calculation unit.
+
 ## Recipe scaling
 
 1.  Scale each ingredient exactly.
@@ -914,7 +938,7 @@ Concept:
 ``` json
 {
   "format": "personal-nutrition-tracker",
-  "version": 1,
+  "version": 2,
   "createdAt": "2026-08-21T17:00:00-07:00",
   "data": {
     "foods": [],
@@ -933,6 +957,8 @@ Concept:
 
 The `personal-nutrition-tracker` format identifier is retained for
 backward compatibility with backups created before the Autofutter rename.
+Backup version 2 includes optional Food standard portions. Version 1
+backups remain restorable and are treated as having no standard portions.
 The format must be versioned, schema-validatable, portable,
 human-inspectable where practical, and complete.
 
@@ -1134,6 +1160,8 @@ last_used_at TEXT NULL
 created_at TEXT NOT NULL
 updated_at TEXT NOT NULL
 deleted_at TEXT NULL
+standard_portion_label TEXT NULL
+standard_portion_weight_g REAL NULL
 ```
 
 ## recipes

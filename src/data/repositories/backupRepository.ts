@@ -90,11 +90,16 @@ export class BackupRepository {
 
   private async insertFood(row: BackupData['foods'][number]): Promise<void> {
     await this.database.runAsync(
-      `INSERT INTO foods VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      `INSERT INTO foods (
+        id, name, reference_weight_g, calories, protein_g, fat_g, carbs_g,
+        sodium_mg, cholesterol_mg, source_type, source_id, use_count,
+        last_used_at, created_at, updated_at, deleted_at,
+        standard_portion_label, standard_portion_weight_g
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       row.id, row.name, row.reference_weight_g, row.calories, row.protein_g,
       row.fat_g, row.carbs_g, row.sodium_mg, row.cholesterol_mg, row.source_type,
       row.source_id, row.use_count, row.last_used_at, row.created_at, row.updated_at,
-      row.deleted_at,
+      row.deleted_at, row.standard_portion_label, row.standard_portion_weight_g,
     );
   }
 

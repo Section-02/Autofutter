@@ -4,6 +4,7 @@ import type { DatabaseConnection } from '@/data/database/types';
 import { calculateRecipeNutrition } from '@/domain/nutrition/recipeCalculator';
 import type { Nutrition, WeightedIngredient } from '@/domain/nutrition/nutritionTypes';
 import { RecipeService } from '@/services/recipes/recipeService';
+import type { StandardPortion } from '@/services/foods/foodService';
 
 export type LoggableSourceKind = 'food' | 'recipe' | 'recipe_variation';
 
@@ -18,6 +19,7 @@ export type LoggableSource = Readonly<{
   sourceFoodId: string | null;
   sourceRecipeId: string | null;
   sourceVariationId: string | null;
+  standardPortion: StandardPortion | null;
 }>;
 
 export class LoggableSourceService {
@@ -48,6 +50,9 @@ export class LoggableSourceService {
         sourceFoodId: food.id,
         sourceRecipeId: null,
         sourceVariationId: null,
+        standardPortion: food.standard_portion_label !== null && food.standard_portion_weight_g !== null
+          ? { label: food.standard_portion_label, weightG: food.standard_portion_weight_g }
+          : null,
       };
     }
 
@@ -71,6 +76,7 @@ export class LoggableSourceService {
         sourceFoodId: null,
         sourceRecipeId: details.recipe.id,
         sourceVariationId: details.variation.id,
+        standardPortion: null,
       };
     }
 
@@ -116,6 +122,7 @@ export class LoggableSourceService {
       sourceFoodId: null,
       sourceRecipeId: recipe.id,
       sourceVariationId: null,
+      standardPortion: null,
     };
   }
 }

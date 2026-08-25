@@ -24,7 +24,18 @@ const foodSchema = z.object({
   created_at: timestamp,
   updated_at: timestamp,
   deleted_at: nullableTimestamp,
-}).strict();
+  standard_portion_label: z.string().trim().min(1).nullable().default(null),
+  standard_portion_weight_g: positiveNumber.nullable().default(null),
+}).strict().superRefine((food, context) => {
+  const hasLabel = food.standard_portion_label !== null;
+  const hasWeight = food.standard_portion_weight_g !== null;
+  if (hasLabel !== hasWeight) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Standard portion label and weight must be provided together.',
+    });
+  }
+});
 
 const recipeSchema = z.object({
   id: z.string().min(1),
@@ -146,7 +157,7 @@ export const backupDataSchema = z.object({
 
 export const backupDocumentSchema = z.object({
   format: z.literal('personal-nutrition-tracker'),
-  version: z.literal(1),
+  version: z.literal(2),
   createdAt: timestamp,
   data: backupDataSchema,
 }).strict();
@@ -162,15 +173,43 @@ export function parseBackupDocument(value: string): BackupDocument {
     throw new Error('This backup is not valid JSON.');
   }
 
-  const result = backupDocumentSchema.safeParse(parsed);
+  const result = backupDocumentSchema.safeParse(upgradeLegacyBackup(parsed));
   if (!result.success) {
     const version = typeof parsed === 'object' && parsed !== null && 'version' in parsed
       ? (parsed as { version?: unknown }).version
       : undefined;
-    if (version !== undefined && version !== 1) {
+    if (version !== undefined && version !== 1 && version !== 2) {
       throw new Error('This backup version is not supported.');
     }
     throw new Error('This backup is incomplete or invalid.');
   }
   return result.data;
+}
+
+function upgradeLegacyBackup(parsed: unknown): unknown {
+  if (
+    typeof parsed !== 'object' || parsed === null ||
+    !('version' in parsed) || parsed.version !== 1 ||
+    !('data' in parsed) || typeof parsed.data !== 'object' || parsed.data === null ||
+    !('foods' in parsed.data) || !Array.isArray(parsed.data.foods)
+  ) {
+    return parsed;
+  }
+
+  return {
+    ...parsed,
+    version: 2,
+    data: {
+      ...parsed.data,
+      foods: parsed.data.foods.map((food) =>
+        typeof food === 'object' && food !== null
+          ? {
+              ...food,
+              standard_portion_label: null,
+              standard_portion_weight_g: null,
+            }
+          : food,
+      ),
+    },
+  };
 }

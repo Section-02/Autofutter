@@ -33,6 +33,8 @@ function testFood(id = 'food-id'): NewFoodRecord {
     source_id: null,
     created_at: timestamp,
     updated_at: timestamp,
+    standard_portion_label: null,
+    standard_portion_weight_g: null,
   };
 }
 
@@ -96,6 +98,23 @@ describe('FoodLoggingService', () => {
       cholesterol_mg: entry.cholesterol_mg,
       has_partial_nutrition: 0,
     });
+  });
+
+  it('exposes a food standard portion without changing gram-based logging', async () => {
+    const food = {
+      ...testFood(),
+      standard_portion_label: 'stick',
+      standard_portion_weight_g: 28,
+    };
+    await new FoodRepository(database).create(food);
+
+    await expect(service.loadSource('food', food.id)).resolves.toMatchObject({
+      standardPortion: { label: 'stick', weightG: 28 },
+    });
+    const entry = await service.addWeighedEntry({
+      kind: 'food', sourceId: food.id, amountG: 56, logDate: '2026-08-21',
+    });
+    expect(entry.amount_g).toBe(56);
   });
 
   it('keeps history unchanged after Food edits and edits grams from the original basis', async () => {

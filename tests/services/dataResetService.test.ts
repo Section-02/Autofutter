@@ -75,6 +75,6 @@ describe('DataResetService', () => {
     )).resolves.toEqual({ last_run_date: null });
     await expect(database.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) AS count FROM schema_migrations;',
-    )).resolves.toEqual({ count: 5 });
+    )).resolves.toEqual({ count: 6 });
   });
 });

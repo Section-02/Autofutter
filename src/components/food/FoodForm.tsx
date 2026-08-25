@@ -24,12 +24,15 @@ export type FoodFormInitialValues = Readonly<{
   carbsG: number | null;
   sodiumMg: number | null;
   cholesterolMg: number | null;
+  standardPortionLabel: string;
+  standardPortionWeightG: number | null;
 }>;
 
 export type FoodFormSubmission = Readonly<{
   name: string;
   referenceWeightG: number;
   nutrition: Nutrition;
+  standardPortion: Readonly<{ label: string; weightG: number }> | null;
 }>;
 
 type FoodFormProps = Readonly<{
@@ -87,6 +90,12 @@ export function FoodForm({
   const [referenceWeightG, setReferenceWeightG] = useState(
     displayNumber(initialValues.referenceWeightG),
   );
+  const [standardPortionLabel, setStandardPortionLabel] = useState(
+    initialValues.standardPortionLabel,
+  );
+  const [standardPortionWeightG, setStandardPortionWeightG] = useState(
+    displayNumber(initialValues.standardPortionWeightG),
+  );
   const [values, setValues] = useState<Record<NumericKey, string>>({
     calories: displayNumber(initialValues.calories),
     proteinG: displayNumber(initialValues.proteinG),
@@ -140,6 +149,13 @@ export function FoodForm({
         sodiumMg: parseNumber(values.sodiumMg),
         cholesterolMg: parseNumber(values.cholesterolMg),
       },
+      standardPortion:
+        standardPortionLabel.trim() === '' && standardPortionWeightG.trim() === ''
+          ? null
+          : {
+              label: standardPortionLabel,
+              weightG: parseNumber(standardPortionWeightG),
+            },
     };
     try {
       await handler(submission);
@@ -167,6 +183,31 @@ export function FoodForm({
           style={styles.nameInput}
           value={name}
         />
+
+        <Text style={styles.sectionTitle}>STANDARD PORTION (OPTIONAL)</Text>
+        <View style={styles.portionRow}>
+          <Text style={styles.portionPrefix}>1</Text>
+          <TextInput
+            autoCapitalize="none"
+            onChangeText={setStandardPortionLabel}
+            placeholder="stick, slice, piece"
+            placeholderTextColor={colors.textMuted}
+            style={styles.portionLabelInput}
+            value={standardPortionLabel}
+          />
+          <Text style={styles.portionEquals}>=</Text>
+          <NumericTextInput
+            accessibilityLabel="Standard portion weight"
+            keyboardType="decimal-pad"
+            onChangeText={setStandardPortionWeightG}
+            placeholder="28"
+            placeholderTextColor={colors.textMuted}
+            selectTextOnFocus
+            style={styles.portionWeightInput}
+            value={standardPortionWeightG}
+          />
+          <Text style={styles.unit}>g</Text>
+        </View>
 
         <Text style={styles.sectionTitle}>NUTRITION FACTS</Text>
         <Text style={styles.help}>These nutrition facts are for:</Text>
@@ -273,6 +314,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   referenceRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  portionRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  portionPrefix: { color: colors.text, fontSize: 16 },
+  portionEquals: { color: colors.textMuted, fontSize: 16 },
+  portionLabelInput: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  portionWeightInput: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: 16,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    textAlign: 'right',
+    width: 76,
+  },
   numberInput: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

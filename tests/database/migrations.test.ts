@@ -39,7 +39,15 @@ describe('database migrations', () => {
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(5);
+    expect(version?.version).toBe(6);
+
+    const foodColumns = await database.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(foods);',
+    );
+    expect(foodColumns.map(({ name }) => name)).toEqual(expect.arrayContaining([
+      'standard_portion_label',
+      'standard_portion_weight_g',
+    ]));
   });
 
   it('is idempotent after the latest migration has been applied', async () => {
@@ -50,7 +58,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(5);
+    expect(rows?.count).toBe(6);
   });
 
   it('rolls back a failed migration without recording its version', async () => {

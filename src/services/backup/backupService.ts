@@ -29,7 +29,7 @@ export class BackupService {
     }
     const document: BackupDocument = {
       format: 'personal-nutrition-tracker',
-      version: 1,
+      version: 2,
       createdAt,
       data,
     };

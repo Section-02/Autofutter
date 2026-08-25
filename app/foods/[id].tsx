@@ -107,6 +107,8 @@ export default function EditFoodScreen() {
             carbsG: food.carbs_g,
             sodiumMg: food.sodium_mg,
             cholesterolMg: food.cholesterol_mg,
+            standardPortionLabel: food.standard_portion_label ?? '',
+            standardPortionWeightG: food.standard_portion_weight_g,
           }}
           onDelete={deleteFood}
           onSubmit={save}
