@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "Personal Nutrition Tracker",
+    "name": "Autofutter",
     "slug": "personal-nutrition-tracker",
+    "icon": "./assets/icon.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "personalnutritiontracker",

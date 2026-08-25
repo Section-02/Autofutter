@@ -205,6 +205,23 @@ describe('FoodLoggingService', () => {
       nutrition_basis_weight_g: 1_653,
       nutrition_basis_calories: exactTotal.calories,
     });
+
+    await new RecipeService(database, {
+      now: () => new Date('2026-08-21T21:00:00.000Z'),
+    }).update('recipe-id', {
+      name: 'Edited Recipe',
+      finishedWeightG: 1_200,
+      ingredients: [
+        { id: 'ingredient-1', foodId: first.id, weightG: 100 },
+        { id: 'ingredient-2', foodId: second.id, weightG: 50 },
+      ],
+    });
+    await expect(new FoodLogRepository(database).findById(entry.id)).resolves.toMatchObject({
+      display_name_snapshot: 'Exact Recipe',
+      calories: expected.calories,
+      nutrition_basis_weight_g: 1_653,
+      nutrition_basis_calories: exactTotal.calories,
+    });
   });
 
   it('resolves, snapshots, and logs a Recipe Variation by grams', async () => {

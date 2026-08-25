@@ -13,13 +13,13 @@ export async function shareBackupFile(
   }
 
   const timestamp = createdAt.toISOString().replace(/[:.]/g, '-');
-  const uri = `${FileSystem.cacheDirectory}personal-nutrition-tracker-backup-${timestamp}.json`;
+  const uri = `${FileSystem.cacheDirectory}autofutter-backup-${timestamp}.json`;
   await FileSystem.writeAsStringAsync(uri, contents, {
     encoding: FileSystem.EncodingType.UTF8,
   });
   try {
     await Sharing.shareAsync(uri, {
-      dialogTitle: 'Save Nutrition Tracker Backup',
+      dialogTitle: 'Save Autofutter Backup',
       mimeType: 'application/json',
       UTI: 'public.json',
     });

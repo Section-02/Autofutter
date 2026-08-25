@@ -76,7 +76,7 @@ export default function BackupScreen() {
 
         <Text style={styles.section}>RESTORE</Text>
         <Text style={styles.help}>
-          Choose a Personal Nutrition Tracker JSON backup. You will see its contents before anything is replaced.
+          Choose an Autofutter JSON backup. You will see its contents before anything is replaced.
         </Text>
         <Pressable disabled={busy} onPress={chooseRestore} style={[styles.secondaryButton, busy && styles.disabled]}>
           <Text style={styles.secondaryText}>CHOOSE BACKUP TO RESTORE</Text>

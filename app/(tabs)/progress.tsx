@@ -77,7 +77,7 @@ export default function ProgressScreen() {
             ) : mode === 'Calories' ? (
               <><ChartLegend items={[{ kind: 'calories', label: 'Calories' }, { kind: 'target', label: 'Target' }, { kind: 'range', label: 'Target range' }]} /><CalorieChart points={data.calories} goals={data.goals} startDate={data.startDate} endDate={data.endDate} /></>
             ) : (
-              <><ChartLegend items={[{ kind: 'weight', label: 'Weight' }, { kind: 'calories', label: 'Calories' }]} /><CombinedChart weights={data.weights} calories={data.calories} startDate={data.startDate} endDate={data.endDate} /></>
+              <><ChartLegend items={[{ kind: 'weight', label: 'Weight' }, { kind: 'calories', label: 'Calories' }, { kind: 'range', label: 'Target range' }]} /><CombinedChart weights={data.weights} calories={data.calories} goals={data.goals} startDate={data.startDate} endDate={data.endDate} /></>
             )}
           </View>
         ) : null}

@@ -125,10 +125,16 @@ describe('BackupService', () => {
   it('rolls back a failed restore and preserves the current database', async () => {
     await seed(database);
     const document = await new BackupService(database).createDocument(timestamp);
-    document.data.foods.push({ ...document.data.foods[0]!, name: 'Duplicate food ID' });
     const target = new TestDatabase();
     await initializeDatabase(target);
     await seed(target, 'existing-food');
+    const runAsync = target.runAsync.bind(target);
+    jest.spyOn(target, 'runAsync').mockImplementation(async (source, ...params) => {
+      if (source.includes('INSERT INTO foods')) {
+        throw new Error('forced restore failure');
+      }
+      return runAsync(source, ...params);
+    });
 
     await expect(
       new BackupService(target).restore(JSON.stringify(document)),

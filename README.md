@@ -1,9 +1,9 @@
-# Personal Nutrition Tracker
+# Autofutter
 
 ## Final Product & Implementation Specification --- V1
 
-This README is the authoritative specification for the Personal
-Nutrition Tracker. Codex should read it completely before
+This README is the authoritative specification for Autofutter. Codex
+should read it completely before
 implementation. Do not silently change product behavior, add features
 because other nutrition apps have them, or substitute a more complicated
 workflow for one defined here.
@@ -773,6 +773,10 @@ step/change over time.
 
 Overlay weight and calories on one timeline with separate Y axes.
 
+Show the historical calorie target tolerance band against the calorie
+axis so weight changes can be compared with whether calorie intake was
+inside or outside the applicable range.
+
 -   Left: weight
 -   Right: calories
 -   Weight: purple
@@ -927,6 +931,8 @@ Concept:
 }
 ```
 
+The `personal-nutrition-tracker` format identifier is retained for
+backward compatibility with backups created before the Autofutter rename.
 The format must be versioned, schema-validatable, portable,
 human-inspectable where practical, and complete.
 
