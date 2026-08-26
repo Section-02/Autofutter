@@ -1,5 +1,6 @@
 import { initializeDatabase } from '../../src/data/database/database';
 import { FoodRepository } from '../../src/data/repositories/foodRepository';
+import { FoodPortionRepository } from '../../src/data/repositories/foodPortionRepository';
 import {
   FoodInUseError,
   FoodService,
@@ -108,6 +109,43 @@ describe('FoodService', () => {
       ...input(),
       standardPortion: { label: 'stick', weightG: 0 },
     })).rejects.toThrow('Standard portion weight must be greater than zero.');
+  });
+
+  it('stores USDA portion conversions with the food for offline use', async () => {
+    await service.create({
+      ...input('Broccoli'),
+      source: { type: 'usda', id: '170379' },
+      portionConversions: [{
+        label: ' cup, chopped ',
+        amount: 0.5,
+        gramWeightG: 44,
+        volumeUnit: 'cup',
+        sourceType: 'usda',
+        sourceId: '135806',
+      }],
+    });
+
+    await expect(new FoodPortionRepository(database).listForFood('food-id')).resolves.toEqual([{
+      food_id: 'food-id',
+      sort_order: 0,
+      label: 'cup, chopped',
+      amount: 0.5,
+      gram_weight_g: 44,
+      volume_unit: 'cup',
+      source_type: 'usda',
+      source_id: '135806',
+      created_at: now.toISOString(),
+    }]);
+  });
+
+  it('does not accept automatic portions for a custom food', async () => {
+    await expect(service.create({
+      ...input(),
+      portionConversions: [{
+        label: 'cup', amount: 1, gramWeightG: 100, volumeUnit: 'cup',
+        sourceType: 'usda', sourceId: null,
+      }],
+    })).rejects.toThrow('Automatic portions require a USDA food source.');
   });
 
   it('soft deletes and restores a food', async () => {

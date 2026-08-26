@@ -486,8 +486,9 @@ USDA search requires an internet connection.
 
 Retry a transient connection or USDA server failure up to two times with
 short delays before showing an error. Do not retry rate-limit or other
-non-transient responses. There is no offline USDA cache/database or
-background retry queue.
+non-transient responses. There is no offline USDA search database or
+background retry queue. Food-specific portion conversions already
+imported with a saved Food are stored locally and remain usable offline.
 
 Flow:
 
@@ -495,8 +496,11 @@ Flow:
 
 Prefer useful generic USDA entries over branded entries when both fit.
 
-Selecting a result opens the standard Food form prepopulated with mapped
-USDA data. Do not save merely because the result was tapped.
+Selecting a result performs one full Food Details request, then opens the
+standard Food form prepopulated with mapped USDA data. Do not request full
+details for every search result, and do not save merely because the result
+was tapped. If the detail request fails, preserve the search result and
+fall back to grams rather than inventing a conversion.
 
 Import only:
 
@@ -509,9 +513,16 @@ Import only:
 -   Carbohydrates
 -   Sodium
 -   Cholesterol
+-   Valid food-specific portion descriptions, quantities, and gram weights
 -   Minimal provenance metadata
 
-Discard the rest. After import, it is an ordinary local editable Food.
+Foundation, FNDDS, and SR Legacy details may provide `foodPortions`.
+Branded details may instead provide a gram serving size with household
+serving text. Cache only positive, interpretable conversions. Treat
+teaspoon, tablespoon, and cup as normalized volume units where present;
+retain other useful labels such as slice, stick, or piece without assuming
+a density. Discard unusable portions such as "quantity not specified".
+After import, it is an ordinary local editable Food.
 
 ------------------------------------------------------------------------
 
@@ -963,10 +974,11 @@ Concept:
 ``` json
 {
   "format": "personal-nutrition-tracker",
-  "version": 3,
+  "version": 4,
   "createdAt": "2026-08-21T17:00:00-07:00",
   "data": {
     "foods": [],
+    "foodPortions": [],
     "recipes": [],
     "recipeIngredients": [],
     "recipeVariations": [],
@@ -985,10 +997,11 @@ Concept:
 
 The `personal-nutrition-tracker` format identifier is retained for
 backward compatibility with backups created before the Autofutter rename.
-Backup version 3 includes the measurement preference. Version 2 includes
-optional Food standard portions. Version 1 backups remain restorable and
-are treated as having no standard portions. Version 1 and 2 backups
-default to `Grams` when restored.
+Backup version 4 includes cached USDA portion conversions. Backup version
+3 includes the measurement preference. Version 2 includes optional Food
+standard portions. Version 1 backups remain restorable and are treated as
+having no standard portions. Versions 1 and 2 default to `Grams` when
+restored; versions 1 through 3 default to no cached USDA conversions.
 The format must be versioned, schema-validatable, portable,
 human-inspectable where practical, and complete.
 
@@ -1192,6 +1205,22 @@ updated_at TEXT NOT NULL
 deleted_at TEXT NULL
 standard_portion_label TEXT NULL
 standard_portion_weight_g REAL NULL
+```
+
+## food_portion_conversions
+
+``` text
+food_id TEXT NOT NULL
+sort_order INTEGER NOT NULL
+label TEXT NOT NULL
+amount REAL NOT NULL
+gram_weight_g REAL NOT NULL
+volume_unit TEXT NULL
+source_type TEXT NOT NULL
+source_id TEXT NULL
+created_at TEXT NOT NULL
+PRIMARY KEY (food_id, sort_order)
+FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 ```
 
 ## recipes

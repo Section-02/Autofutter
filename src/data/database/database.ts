@@ -21,6 +21,7 @@ export function adaptExpoDatabase(database: SQLiteDatabase): DatabaseConnection 
 export async function initializeDatabase(database: DatabaseConnection): Promise<void> {
   await database.execAsync('PRAGMA journal_mode = WAL;');
   await database.execAsync('PRAGMA foreign_keys = ON;');
+  await database.execAsync('PRAGMA ignore_check_constraints = OFF;');
   await runMigrations(database);
 }
 

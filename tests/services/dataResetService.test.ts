@@ -7,6 +7,7 @@ const userTables = [
   'recipe_variation_overrides',
   'recipe_variations',
   'recipe_ingredients',
+  'food_portion_conversions',
   'recipes',
   'foods',
   'daily_nutrition_summaries',
@@ -36,6 +37,10 @@ describe('DataResetService', () => {
       INSERT INTO recipe_ingredients (
         id, recipe_id, food_id, weight_g, sort_order, created_at, updated_at
       ) VALUES ('ingredient', 'recipe', 'food', 100, 0, 'now', 'now');
+      INSERT INTO food_portion_conversions (
+        food_id, sort_order, label, amount, gram_weight_g, volume_unit,
+        source_type, source_id, created_at
+      ) VALUES ('food', 0, 'cup', 1, 100, 'cup', 'usda', 'portion', 'now');
       INSERT INTO recipe_variations (
         id, recipe_id, name, finished_weight_g, created_at, updated_at
       ) VALUES ('variation', 'recipe', 'Variation', 100, 'now', 'now');
@@ -76,7 +81,7 @@ describe('DataResetService', () => {
     )).resolves.toEqual({ last_run_date: null });
     await expect(database.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) AS count FROM schema_migrations;',
-    )).resolves.toEqual({ count: 7 });
+    )).resolves.toEqual({ count: 8 });
     await expect(database.getFirstAsync(
       'SELECT measurement_system FROM app_preferences WHERE id = 1;',
     )).resolves.toEqual({ measurement_system: 'grams' });

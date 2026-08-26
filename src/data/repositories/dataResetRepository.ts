@@ -9,6 +9,7 @@ export class DataResetRepository {
       DELETE FROM recipe_variation_overrides;
       DELETE FROM recipe_variations;
       DELETE FROM recipe_ingredients;
+      DELETE FROM food_portion_conversions;
       DELETE FROM recipes;
       DELETE FROM foods;
       DELETE FROM daily_nutrition_summaries;

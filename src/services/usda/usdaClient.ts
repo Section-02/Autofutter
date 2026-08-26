@@ -1,4 +1,4 @@
-import { mapUsdaSearchResponse } from './usdaMapper';
+import { mapUsdaFood, mapUsdaSearchResponse } from './usdaMapper';
 import type { UsdaFoodCandidate } from './usdaTypes';
 
 const USDA_SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
@@ -49,22 +49,11 @@ export class UsdaClient {
     this.sleepImpl = options.sleepImpl ?? sleep;
   }
 
-  private async request(
-    query: string,
-    dataType: readonly string[],
-    pageSize: number,
-  ): Promise<UsdaFoodCandidate[]> {
+  private async fetchJson(input: string, init?: RequestInit): Promise<unknown> {
     for (let attempt = 0; attempt <= this.retryDelaysMs.length; attempt += 1) {
       let response: Response;
       try {
-        response = await this.fetchImpl(
-          `${USDA_SEARCH_URL}?api_key=${encodeURIComponent(this.apiKey)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, dataType, pageSize }),
-          },
-        );
+        response = await this.fetchImpl(input, init);
       } catch {
         if (attempt < this.retryDelaysMs.length) {
           await this.sleepImpl(this.retryDelaysMs[attempt]!);
@@ -85,8 +74,7 @@ export class UsdaClient {
       }
 
       try {
-        const body: unknown = await response.json();
-        return mapUsdaSearchResponse(body);
+        return await response.json();
       } catch {
         if (attempt < this.retryDelaysMs.length) {
           await this.sleepImpl(this.retryDelaysMs[attempt]!);
@@ -97,6 +85,22 @@ export class UsdaClient {
     }
 
     throw new UsdaSearchError('USDA search is temporarily unavailable.');
+  }
+
+  private async request(
+    query: string,
+    dataType: readonly string[],
+    pageSize: number,
+  ): Promise<UsdaFoodCandidate[]> {
+    const body = await this.fetchJson(
+      `${USDA_SEARCH_URL}?api_key=${encodeURIComponent(this.apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, dataType, pageSize }),
+      },
+    );
+    return mapUsdaSearchResponse(body);
   }
 
   async search(query: string): Promise<UsdaFoodCandidate[]> {
@@ -112,5 +116,16 @@ export class UsdaClient {
       seen.add(fdcId);
       return true;
     });
+  }
+
+  async details(fdcId: string): Promise<UsdaFoodCandidate> {
+    const body = await this.fetchJson(
+      `https://api.nal.usda.gov/fdc/v1/food/${encodeURIComponent(fdcId)}?format=full&api_key=${encodeURIComponent(this.apiKey)}`,
+    );
+    const food = mapUsdaFood(body);
+    if (food === null) {
+      throw new UsdaSearchError('USDA food details are temporarily unavailable.');
+    }
+    return food;
   }
 }

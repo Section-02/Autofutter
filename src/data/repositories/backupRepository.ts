@@ -7,6 +7,7 @@ export class BackupRepository {
   async exportData(): Promise<BackupData> {
     const [
       foods,
+      foodPortions,
       recipes,
       recipeIngredients,
       recipeVariations,
@@ -19,6 +20,7 @@ export class BackupRepository {
       preferencesRow,
     ] = await Promise.all([
       this.database.getAllAsync<BackupData['foods'][number]>('SELECT * FROM foods ORDER BY id;'),
+      this.database.getAllAsync<BackupData['foodPortions'][number]>('SELECT * FROM food_portion_conversions ORDER BY food_id, sort_order;'),
       this.database.getAllAsync<BackupData['recipes'][number]>('SELECT * FROM recipes ORDER BY id;'),
       this.database.getAllAsync<BackupData['recipeIngredients'][number]>('SELECT * FROM recipe_ingredients ORDER BY id;'),
       this.database.getAllAsync<BackupData['recipeVariations'][number]>('SELECT * FROM recipe_variations ORDER BY id;'),
@@ -32,6 +34,7 @@ export class BackupRepository {
     ]);
     return {
       foods,
+      foodPortions,
       recipes,
       recipeIngredients,
       recipeVariations,
@@ -48,6 +51,7 @@ export class BackupRepository {
   async replaceAll(data: BackupData): Promise<void> {
     await this.clearBackedUpTables();
     for (const row of data.foods) await this.insertFood(row);
+    for (const row of data.foodPortions) await this.insertFoodPortion(row);
     for (const row of data.recipes) await this.insertRecipe(row);
     for (const row of data.recipeIngredients) await this.insertRecipeIngredient(row);
     for (const row of data.recipeVariations) await this.insertRecipeVariation(row);
@@ -84,6 +88,7 @@ export class BackupRepository {
       'recipe_variation_overrides',
       'recipe_variations',
       'recipe_ingredients',
+      'food_portion_conversions',
       'recipes',
       'foods',
       'daily_nutrition_summaries',
@@ -115,6 +120,17 @@ export class BackupRepository {
       'INSERT INTO recipes VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
       row.id, row.name, row.finished_weight_g, row.use_count, row.last_used_at,
       row.created_at, row.updated_at, row.deleted_at,
+    );
+  }
+
+  private async insertFoodPortion(row: BackupData['foodPortions'][number]): Promise<void> {
+    await this.database.runAsync(
+      `INSERT INTO food_portion_conversions (
+        food_id, sort_order, label, amount, gram_weight_g, volume_unit,
+        source_type, source_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      row.food_id, row.sort_order, row.label, row.amount, row.gram_weight_g,
+      row.volume_unit, row.source_type, row.source_id, row.created_at,
     );
   }
 

@@ -48,6 +48,18 @@ const recipeSchema = z.object({
   deleted_at: nullableTimestamp,
 }).strict();
 
+const foodPortionSchema = z.object({
+  food_id: z.string().min(1),
+  sort_order: nonnegativeInteger,
+  label: z.string().trim().min(1),
+  amount: positiveNumber,
+  gram_weight_g: positiveNumber,
+  volume_unit: z.enum(['teaspoon', 'tablespoon', 'cup']).nullable(),
+  source_type: z.literal('usda'),
+  source_id: z.string().nullable(),
+  created_at: timestamp,
+}).strict();
+
 const recipeIngredientSchema = z.object({
   id: z.string().min(1),
   recipe_id: z.string().min(1),
@@ -148,6 +160,7 @@ const preferencesSchema = z.object({
 
 export const backupDataSchema = z.object({
   foods: z.array(foodSchema),
+  foodPortions: z.array(foodPortionSchema),
   recipes: z.array(recipeSchema),
   recipeIngredients: z.array(recipeIngredientSchema),
   recipeVariations: z.array(recipeVariationSchema),
@@ -162,7 +175,7 @@ export const backupDataSchema = z.object({
 
 export const backupDocumentSchema = z.object({
   format: z.literal('personal-nutrition-tracker'),
-  version: z.literal(3),
+  version: z.literal(4),
   createdAt: timestamp,
   data: backupDataSchema,
 }).strict();
@@ -183,7 +196,7 @@ export function parseBackupDocument(value: string): BackupDocument {
     const version = typeof parsed === 'object' && parsed !== null && 'version' in parsed
       ? (parsed as { version?: unknown }).version
       : undefined;
-    if (version !== undefined && version !== 1 && version !== 2 && version !== 3) {
+    if (version !== undefined && version !== 1 && version !== 2 && version !== 3 && version !== 4) {
       throw new Error('This backup version is not supported.');
     }
     throw new Error('This backup is incomplete or invalid.');
@@ -220,16 +233,28 @@ function upgradeLegacyBackup(parsed: unknown): unknown {
     };
   }
 
-  const upgradedData = 'data' in upgraded && typeof upgraded.data === 'object' && upgraded.data !== null
+  let upgradedData = 'data' in upgraded && typeof upgraded.data === 'object' && upgraded.data !== null
     ? upgraded.data
     : null;
   if (upgraded.version === 2 && upgradedData) {
-    return {
+    upgraded = {
       ...upgraded,
       version: 3,
       data: {
         ...upgradedData,
         preferences: { measurementSystem: 'grams' },
+      },
+    };
+    upgradedData = upgraded.data as Record<string, unknown>;
+  }
+
+  if (upgraded.version === 3 && upgradedData) {
+    upgraded = {
+      ...upgraded,
+      version: 4,
+      data: {
+        ...upgradedData,
+        foodPortions: [],
       },
     };
   }

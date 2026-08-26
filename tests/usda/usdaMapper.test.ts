@@ -35,6 +35,7 @@ describe('USDA mapper', () => {
         sodiumMg: 74.4,
         cholesterolMg: 85.6,
       },
+      portions: [],
     });
   });
 
@@ -88,5 +89,77 @@ describe('USDA mapper', () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.nutrition.fatG).toBeNull();
     expect(results[0]?.nutrition.cholesterolMg).toBeNull();
+  });
+
+  it('maps USDA foodPortions and identifies supported volume units', () => {
+    const mapped = mapUsdaFood({
+      fdcId: 170379,
+      description: 'Broccoli, raw',
+      dataType: 'SR Legacy',
+      foodNutrients: nutrients,
+      foodPortions: [
+        { id: 1, amount: 0.5, gramWeight: 44, modifier: 'cup, chopped or diced' },
+        { id: 2, amount: 1, gramWeight: 31, modifier: 'spear (about 5 inches long)' },
+        { id: 3, amount: 1, gramWeight: 85, measureUnit: { name: 'RACC' } },
+      ],
+    });
+
+    expect(mapped?.portions).toEqual([
+      {
+        label: 'cup, chopped or diced',
+        amount: 0.5,
+        gramWeightG: 44,
+        volumeUnit: 'cup',
+        sourceId: '1',
+      },
+      {
+        label: 'spear (about 5 inches long)',
+        amount: 1,
+        gramWeightG: 31,
+        volumeUnit: null,
+        sourceId: '2',
+      },
+    ]);
+  });
+
+  it('extracts an amount from FNDDS portion descriptions', () => {
+    const mapped = mapUsdaFood({
+      fdcId: 2708422,
+      description: 'Rice, white, cooked',
+      dataType: 'Survey (FNDDS)',
+      foodNutrients: nutrients,
+      foodPortions: [
+        { id: 11, amount: null, gramWeight: 174, portionDescription: '1 cup, cooked' },
+        { id: 12, amount: null, gramWeight: 130, portionDescription: 'Quantity not specified' },
+      ],
+    });
+
+    expect(mapped?.portions).toEqual([{
+      label: 'cup, cooked',
+      amount: 1,
+      gramWeightG: 174,
+      volumeUnit: 'cup',
+      sourceId: '11',
+    }]);
+  });
+
+  it('maps a branded household serving when its serving size is in grams', () => {
+    const mapped = mapUsdaFood({
+      fdcId: 534358,
+      description: 'Nut mix',
+      dataType: 'Branded',
+      servingSize: 30,
+      servingSizeUnit: 'g',
+      householdServingFullText: '2 tbsp',
+      foodNutrients: nutrients,
+    });
+
+    expect(mapped?.portions).toEqual([{
+      label: 'tbsp',
+      amount: 2,
+      gramWeightG: 30,
+      volumeUnit: 'tablespoon',
+      sourceId: null,
+    }]);
   });
 });

@@ -46,6 +46,7 @@ export default function UsdaSearchScreen() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const initialSearchStarted = useRef(false);
   const searchInFlight = useRef(false);
 
@@ -79,7 +80,16 @@ export default function UsdaSearchScreen() {
     }
   }, [initialQuery, search]);
 
-  const review = (food: UsdaFoodCandidate) => {
+  const review = async (food: UsdaFoodCandidate) => {
+    if (reviewingId !== null) return;
+    setReviewingId(food.fdcId);
+    let reviewedFood = food;
+    try {
+      reviewedFood = await client.details(food.fdcId);
+    } catch {
+      // Nutrition from search remains usable; grams are the safe fallback when
+      // the optional detail request cannot supply portion conversions.
+    }
     router.push({
       pathname: '/foods/new',
       params: {
@@ -87,17 +97,19 @@ export default function UsdaSearchScreen() {
         returnToken,
         date,
         sourceType: 'usda',
-        sourceId: food.fdcId,
-        name: food.name,
-        referenceWeightG: String(food.referenceWeightG),
-        calories: valueParam(food.nutrition.calories),
-        proteinG: valueParam(food.nutrition.proteinG),
-        fatG: valueParam(food.nutrition.fatG),
-        carbsG: valueParam(food.nutrition.carbsG),
-        sodiumMg: valueParam(food.nutrition.sodiumMg),
-        cholesterolMg: valueParam(food.nutrition.cholesterolMg),
+        sourceId: reviewedFood.fdcId,
+        name: reviewedFood.name,
+        referenceWeightG: String(reviewedFood.referenceWeightG),
+        calories: valueParam(reviewedFood.nutrition.calories),
+        proteinG: valueParam(reviewedFood.nutrition.proteinG),
+        fatG: valueParam(reviewedFood.nutrition.fatG),
+        carbsG: valueParam(reviewedFood.nutrition.carbsG),
+        sodiumMg: valueParam(reviewedFood.nutrition.sodiumMg),
+        cholesterolMg: valueParam(reviewedFood.nutrition.cholesterolMg),
+        portionConversions: JSON.stringify(reviewedFood.portions),
       },
     });
+    setReviewingId(null);
   };
 
   return (
@@ -134,7 +146,8 @@ export default function UsdaSearchScreen() {
         {results.map((food) => (
           <Pressable
             key={food.fdcId}
-            onPress={() => review(food)}
+            disabled={reviewingId !== null}
+            onPress={() => void review(food)}
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}
           >
             <View style={styles.rowText}>
@@ -143,7 +156,9 @@ export default function UsdaSearchScreen() {
                 {food.brandOwner ? `${food.brandOwner} · ` : ''}{food.dataType}
               </Text>
             </View>
-            <SymbolView name="chevron.right" size={16} tintColor={colors.textMuted} />
+            {reviewingId === food.fdcId
+              ? <ActivityIndicator color={colors.accent} />
+              : <SymbolView name="chevron.right" size={16} tintColor={colors.textMuted} />}
           </Pressable>
         ))}
         {!loading && searched && !error && results.length === 0 ? (

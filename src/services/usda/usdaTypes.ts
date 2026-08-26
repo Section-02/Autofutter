@@ -14,4 +14,13 @@ export type UsdaFoodCandidate = Readonly<{
   brandOwner: string | null;
   referenceWeightG: number;
   nutrition: UsdaNutrition;
+  portions: readonly UsdaPortion[];
+}>;
+
+export type UsdaPortion = Readonly<{
+  label: string;
+  amount: number;
+  gramWeightG: number;
+  volumeUnit: 'teaspoon' | 'tablespoon' | 'cup' | null;
+  sourceId: string | null;
 }>;

@@ -11,6 +11,7 @@ import {
 } from '@/components/food/FoodForm';
 import { useAppDatabase } from '@/hooks/useAppDatabase';
 import { FoodService } from '@/services/foods/foodService';
+import type { UsdaPortion } from '@/services/usda/usdaTypes';
 import { deliverRecipeIngredient } from '@/services/recipes/recipeIngredientHandoff';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -26,6 +27,26 @@ function optionalNumber(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function portionConversions(value: string | undefined): UsdaPortion[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((portion): portion is UsdaPortion => {
+      if (typeof portion !== 'object' || portion === null) return false;
+      const candidate = portion as Partial<UsdaPortion>;
+      return typeof candidate.label === 'string' && candidate.label.trim().length > 0 &&
+        typeof candidate.amount === 'number' && Number.isFinite(candidate.amount) && candidate.amount > 0 &&
+        typeof candidate.gramWeightG === 'number' && Number.isFinite(candidate.gramWeightG) && candidate.gramWeightG > 0 &&
+        (candidate.volumeUnit === null || candidate.volumeUnit === 'teaspoon' ||
+          candidate.volumeUnit === 'tablespoon' || candidate.volumeUnit === 'cup') &&
+        (candidate.sourceId === null || typeof candidate.sourceId === 'string');
+    });
+  } catch {
+    return [];
+  }
+}
+
 export default function NewFoodScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -36,6 +57,9 @@ export default function NewFoodScreen() {
   const requestedReturn = first(params.returnTo);
   const returnTo = requestedReturn === 'log' ? 'log' : requestedReturn === 'recipe' ? 'recipe' : 'foods';
   const sourceId = first(params.sourceId) ?? null;
+  const usdaPortions = sourceType === 'usda'
+    ? portionConversions(first(params.portionConversions))
+    : [];
   const returnToken = first(params.returnToken);
   const date = first(params.date) ?? todayLocalDate();
 
@@ -56,6 +80,10 @@ export default function NewFoodScreen() {
     service.create({
       ...values,
       source: { type: sourceType, id: sourceId },
+      portionConversions: usdaPortions.map((portion) => ({
+        ...portion,
+        sourceType: 'usda' as const,
+      })),
     });
 
   const save = async (values: FoodFormSubmission) => {

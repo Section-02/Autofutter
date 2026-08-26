@@ -67,6 +67,23 @@ describe('UsdaClient', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
+  it('requests full details only for the selected food', async () => {
+    const fetchImpl = jest.fn(async (input: string) => response({
+      fdcId: 170379,
+      description: 'Broccoli, raw',
+      dataType: 'SR Legacy',
+      foodNutrients: [],
+      foodPortions: [{ id: 1, amount: 0.5, gramWeight: 44, modifier: 'cup, chopped' }],
+    }));
+    const client = new UsdaClient({ apiKey: 'test-key', fetchImpl });
+
+    const food = await client.details('170379');
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0]?.[0]).toContain('/food/170379?format=full');
+    expect(food.portions).toHaveLength(1);
+  });
+
   it('retries a temporary USDA failure before showing an error', async () => {
     const sleepImpl = jest.fn(async () => undefined);
     const fetchImpl = jest

@@ -29,6 +29,7 @@ describe('database migrations', () => {
       'app_preferences',
       'daily_nutrition_summaries',
       'food_log_entries',
+      'food_portion_conversions',
       'foods',
       'log_day_completions',
       'nutrition_goals',
@@ -40,7 +41,7 @@ describe('database migrations', () => {
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(7);
+    expect(version?.version).toBe(8);
 
     await expect(database.getFirstAsync(
       'SELECT measurement_system FROM app_preferences WHERE id = 1;',
@@ -63,7 +64,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(7);
+    expect(rows?.count).toBe(8);
   });
 
   it('rolls back a failed migration without recording its version', async () => {

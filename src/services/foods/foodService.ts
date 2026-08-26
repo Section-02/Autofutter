@@ -6,6 +6,10 @@ import {
   type FoodRecord,
   type FoodSort,
 } from '@/data/repositories/foodRepository';
+import {
+  FoodPortionRepository,
+  type NewFoodPortion,
+} from '@/data/repositories/foodPortionRepository';
 import type { Nutrition } from '@/domain/nutrition/nutritionTypes';
 
 export type FoodSource = Readonly<{
@@ -24,6 +28,7 @@ export type FoodInput = Readonly<{
   nutrition: Nutrition;
   source: FoodSource;
   standardPortion: StandardPortion | null;
+  portionConversions?: readonly NewFoodPortion[];
 }>;
 
 type FoodServiceOptions = Readonly<{
@@ -80,7 +85,17 @@ export function validateFoodInput(input: FoodInput): FoodInput {
     validateNumber(input.standardPortion.weightG, 'Standard portion weight', true);
     standardPortion = { label, weightG: input.standardPortion.weightG };
   }
-  return { ...input, name, standardPortion };
+  const portionConversions = (input.portionConversions ?? []).map((portion) => {
+    const label = portion.label.trim();
+    if (input.source.type !== 'usda' || portion.sourceType !== 'usda') {
+      throw new FoodValidationError('Automatic portions require a USDA food source.');
+    }
+    if (!label) throw new FoodValidationError('Portion label is required.');
+    validateNumber(portion.amount, 'Portion amount', true);
+    validateNumber(portion.gramWeightG, 'Portion gram weight', true);
+    return { ...portion, label };
+  });
+  return { ...input, name, standardPortion, portionConversions };
 }
 
 export class FoodService {
@@ -132,7 +147,14 @@ export class FoodService {
       standard_portion_label: valid.standardPortion?.label ?? null,
       standard_portion_weight_g: valid.standardPortion?.weightG ?? null,
     };
-    await new FoodRepository(this.database).create(food);
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      await new FoodRepository(transaction).create(food);
+      await new FoodPortionRepository(transaction).replaceForFood(
+        food.id,
+        valid.portionConversions ?? [],
+        timestamp,
+      );
+    });
     return food;
   }
 
