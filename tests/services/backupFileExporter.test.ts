@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-import { shareBackupFile } from '../../src/services/backup/backupFileExporter';
+import { shareBackupFile, shareLibraryFile } from '../../src/services/backup/backupFileExporter';
 
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
@@ -58,5 +58,15 @@ describe('shareBackupFile', () => {
       expect.stringMatching(/autofutter-backup-.+\.json$/),
       { idempotent: true },
     );
+  });
+
+  it('uses a distinct filename and share title for a food-library export', async () => {
+    await shareLibraryFile('{}', 'foods', new Date('2026-08-22T20:00:00.000Z'));
+
+    const uri = 'file:///cache/autofutter-foods-2026-08-22T20-00-00-000Z.json';
+    expect(writeAsStringAsync).toHaveBeenCalledWith(uri, '{}', { encoding: 'utf8' });
+    expect(shareAsync).toHaveBeenCalledWith(uri, expect.objectContaining({
+      dialogTitle: 'Share Autofutter Foods',
+    }));
   });
 });

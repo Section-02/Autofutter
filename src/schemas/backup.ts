@@ -7,7 +7,7 @@ const nonnegativeNumber = z.number().finite().nonnegative();
 const positiveNumber = z.number().finite().positive();
 const nonnegativeInteger = z.number().int().nonnegative();
 
-const foodSchema = z.object({
+export const foodSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1),
   reference_weight_g: positiveNumber,
@@ -37,7 +37,7 @@ const foodSchema = z.object({
   }
 });
 
-const recipeSchema = z.object({
+export const recipeSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1),
   finished_weight_g: positiveNumber.nullable(),
@@ -48,7 +48,7 @@ const recipeSchema = z.object({
   deleted_at: nullableTimestamp,
 }).strict();
 
-const foodPortionSchema = z.object({
+export const foodPortionSchema = z.object({
   food_id: z.string().min(1),
   sort_order: nonnegativeInteger,
   label: z.string().trim().min(1),
@@ -60,7 +60,7 @@ const foodPortionSchema = z.object({
   created_at: timestamp,
 }).strict();
 
-const recipeIngredientSchema = z.object({
+export const recipeIngredientSchema = z.object({
   id: z.string().min(1),
   recipe_id: z.string().min(1),
   food_id: z.string().min(1),
@@ -70,7 +70,7 @@ const recipeIngredientSchema = z.object({
   updated_at: timestamp,
 }).strict();
 
-const recipeVariationSchema = z.object({
+export const recipeVariationSchema = z.object({
   id: z.string().min(1),
   recipe_id: z.string().min(1),
   name: z.string().trim().min(1),
@@ -80,7 +80,7 @@ const recipeVariationSchema = z.object({
   deleted_at: nullableTimestamp,
 }).strict();
 
-const variationOverrideSchema = z.object({
+export const variationOverrideSchema = z.object({
   id: z.string().min(1),
   variation_id: z.string().min(1),
   action: z.enum(['replace', 'remove', 'add', 'change_weight']),

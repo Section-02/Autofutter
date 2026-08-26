@@ -1031,6 +1031,35 @@ capabilities. The user may choose iCloud Drive, On My iPhone, or another
 Files provider when available. Do not claim that a backup was saved merely
 because the share sheet was opened.
 
+## Separate library exports
+
+Settings → Backup also provides separate **Export Foods** and **Export
+Recipes** actions for sharing reusable library data without sharing the
+user's logs, goals, weights, day completions, or preferences. These files
+use the versioned `autofutter-share` JSON format and the iOS share sheet.
+
+A Food export contains active Foods, their optional standard portions,
+and their cached USDA portion conversions. A Recipe export contains active
+Recipes, their ingredients, active Variations and overrides, plus only the
+Food records and cached portion conversions needed by those Recipes.
+Unrelated Foods and deleted Recipes or Variations are not included.
+
+These library exports are distinct from full backup files and are not
+accepted by the destructive full-backup restore action. **Import Shared
+Library** merges them into the current library instead of replacing the
+database. Before importing, match duplicates by record ID or
+case-insensitive trimmed name and show every Food and Recipe conflict in
+one review window. Each conflict defaults to **Keep Existing** and may be
+changed independently to **Overwrite Existing**.
+
+Keeping an existing Food maps imported Recipe ingredients to that local
+Food. Overwriting updates the existing local Food or Recipe in place so
+its local identity, usage counts, and historical log snapshots are
+preserved. Non-conflicting records import automatically. Recipe ingredient,
+Variation, and override identifiers are remapped to collision-free local
+identifiers. The complete merge is transactional and rolls back on any
+failure.
+
 ## Restore
 
 1.  Select backup.

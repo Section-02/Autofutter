@@ -5,6 +5,24 @@ export async function shareBackupFile(
   contents: string,
   createdAt = new Date(),
 ): Promise<void> {
+  return shareJsonFile(contents, 'autofutter-backup', 'Save Autofutter Backup', createdAt);
+}
+
+export async function shareLibraryFile(
+  contents: string,
+  kind: 'foods' | 'recipes',
+  createdAt = new Date(),
+): Promise<void> {
+  const label = kind === 'foods' ? 'Foods' : 'Recipes';
+  return shareJsonFile(contents, `autofutter-${kind}`, `Share Autofutter ${label}`, createdAt);
+}
+
+async function shareJsonFile(
+  contents: string,
+  filenamePrefix: string,
+  dialogTitle: string,
+  createdAt: Date,
+): Promise<void> {
   if (!FileSystem.cacheDirectory) {
     throw new Error('Temporary file storage is unavailable.');
   }
@@ -13,13 +31,13 @@ export async function shareBackupFile(
   }
 
   const timestamp = createdAt.toISOString().replace(/[:.]/g, '-');
-  const uri = `${FileSystem.cacheDirectory}autofutter-backup-${timestamp}.json`;
+  const uri = `${FileSystem.cacheDirectory}${filenamePrefix}-${timestamp}.json`;
   await FileSystem.writeAsStringAsync(uri, contents, {
     encoding: FileSystem.EncodingType.UTF8,
   });
   try {
     await Sharing.shareAsync(uri, {
-      dialogTitle: 'Save Autofutter Backup',
+      dialogTitle,
       mimeType: 'application/json',
       UTI: 'public.json',
     });

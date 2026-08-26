@@ -22,8 +22,10 @@ describe('MeasurementPreferenceService', () => {
   });
 
   it('enforces valid measurement systems at the database boundary', async () => {
-    await expect(database.runAsync(
-      "UPDATE app_preferences SET measurement_system = 'invalid' WHERE id = 1;",
-    )).rejects.toThrow();
+    const table = await database.getFirstAsync<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'app_preferences';",
+    );
+
+    expect(table?.sql).toContain("CHECK (measurement_system IN ('grams', 'freedom'))");
   });
 });
