@@ -142,6 +142,10 @@ const logDayCompletionSchema = z.object({
   ended_at: timestamp,
 }).strict();
 
+const preferencesSchema = z.object({
+  measurementSystem: z.enum(['grams', 'freedom']),
+}).strict();
+
 export const backupDataSchema = z.object({
   foods: z.array(foodSchema),
   recipes: z.array(recipeSchema),
@@ -153,11 +157,12 @@ export const backupDataSchema = z.object({
   weighIns: z.array(weighInSchema),
   goals: z.array(goalSchema),
   logDayCompletions: z.array(logDayCompletionSchema),
+  preferences: preferencesSchema,
 }).strict();
 
 export const backupDocumentSchema = z.object({
   format: z.literal('personal-nutrition-tracker'),
-  version: z.literal(2),
+  version: z.literal(3),
   createdAt: timestamp,
   data: backupDataSchema,
 }).strict();
@@ -178,7 +183,7 @@ export function parseBackupDocument(value: string): BackupDocument {
     const version = typeof parsed === 'object' && parsed !== null && 'version' in parsed
       ? (parsed as { version?: unknown }).version
       : undefined;
-    if (version !== undefined && version !== 1 && version !== 2) {
+    if (version !== undefined && version !== 1 && version !== 2 && version !== 3) {
       throw new Error('This backup version is not supported.');
     }
     throw new Error('This backup is incomplete or invalid.');
@@ -189,27 +194,45 @@ export function parseBackupDocument(value: string): BackupDocument {
 function upgradeLegacyBackup(parsed: unknown): unknown {
   if (
     typeof parsed !== 'object' || parsed === null ||
-    !('version' in parsed) || parsed.version !== 1 ||
-    !('data' in parsed) || typeof parsed.data !== 'object' || parsed.data === null ||
-    !('foods' in parsed.data) || !Array.isArray(parsed.data.foods)
+    !('version' in parsed) ||
+    !('data' in parsed) || typeof parsed.data !== 'object' || parsed.data === null
   ) {
     return parsed;
   }
 
-  return {
-    ...parsed,
-    version: 2,
-    data: {
-      ...parsed.data,
-      foods: parsed.data.foods.map((food) =>
-        typeof food === 'object' && food !== null
-          ? {
-              ...food,
-              standard_portion_label: null,
-              standard_portion_weight_g: null,
-            }
-          : food,
-      ),
-    },
-  };
+  let upgraded: Record<string, unknown> = parsed;
+  if (parsed.version === 1 && 'foods' in parsed.data && Array.isArray(parsed.data.foods)) {
+    upgraded = {
+      ...parsed,
+      version: 2,
+      data: {
+        ...parsed.data,
+        foods: parsed.data.foods.map((food) =>
+          typeof food === 'object' && food !== null
+            ? {
+                ...food,
+                standard_portion_label: null,
+                standard_portion_weight_g: null,
+              }
+            : food,
+        ),
+      },
+    };
+  }
+
+  const upgradedData = 'data' in upgraded && typeof upgraded.data === 'object' && upgraded.data !== null
+    ? upgraded.data
+    : null;
+  if (upgraded.version === 2 && upgradedData) {
+    return {
+      ...upgraded,
+      version: 3,
+      data: {
+        ...upgradedData,
+        preferences: { measurementSystem: 'grams' },
+      },
+    };
+  }
+
+  return upgraded;
 }

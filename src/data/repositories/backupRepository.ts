@@ -16,6 +16,7 @@ export class BackupRepository {
       weighIns,
       goals,
       logDayCompletions,
+      preferencesRow,
     ] = await Promise.all([
       this.database.getAllAsync<BackupData['foods'][number]>('SELECT * FROM foods ORDER BY id;'),
       this.database.getAllAsync<BackupData['recipes'][number]>('SELECT * FROM recipes ORDER BY id;'),
@@ -27,6 +28,7 @@ export class BackupRepository {
       this.database.getAllAsync<BackupData['weighIns'][number]>('SELECT * FROM weigh_ins ORDER BY date;'),
       this.database.getAllAsync<BackupData['goals'][number]>('SELECT * FROM nutrition_goals ORDER BY effective_date;'),
       this.database.getAllAsync<BackupData['logDayCompletions'][number]>('SELECT * FROM log_day_completions ORDER BY date;'),
+      this.database.getFirstAsync<{ measurement_system: BackupData['preferences']['measurementSystem'] }>('SELECT measurement_system FROM app_preferences WHERE id = 1;'),
     ]);
     return {
       foods,
@@ -39,6 +41,7 @@ export class BackupRepository {
       weighIns,
       goals,
       logDayCompletions,
+      preferences: { measurementSystem: preferencesRow?.measurement_system ?? 'grams' },
     };
   }
 
@@ -54,6 +57,10 @@ export class BackupRepository {
     for (const row of data.goals) await this.insertGoal(row);
     for (const row of data.weighIns) await this.insertWeighIn(row);
     for (const row of data.logDayCompletions) await this.insertLogDayCompletion(row);
+    await this.database.runAsync(
+      'UPDATE app_preferences SET measurement_system = ? WHERE id = 1;',
+      data.preferences.measurementSystem,
+    );
   }
 
   async verifyIntegrity(): Promise<void> {

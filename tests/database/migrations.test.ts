@@ -26,6 +26,7 @@ describe('database migrations', () => {
     );
 
     expect(tables.map(({ name }) => name)).toEqual([
+      'app_preferences',
       'daily_nutrition_summaries',
       'food_log_entries',
       'foods',
@@ -39,7 +40,11 @@ describe('database migrations', () => {
       'schema_migrations',
       'weigh_ins',
     ]);
-    expect(version?.version).toBe(6);
+    expect(version?.version).toBe(7);
+
+    await expect(database.getFirstAsync(
+      'SELECT measurement_system FROM app_preferences WHERE id = 1;',
+    )).resolves.toEqual({ measurement_system: 'grams' });
 
     const foodColumns = await database.getAllAsync<{ name: string }>(
       'PRAGMA table_info(foods);',
@@ -58,7 +63,7 @@ describe('database migrations', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations;',
     );
 
-    expect(rows?.count).toBe(6);
+    expect(rows?.count).toBe(7);
   });
 
   it('rolls back a failed migration without recording its version', async () => {

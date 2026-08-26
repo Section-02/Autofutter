@@ -2,6 +2,7 @@ import { initializeDatabase } from '../../src/data/database/database';
 import { FoodRepository } from '../../src/data/repositories/foodRepository';
 import { parseBackupDocument } from '../../src/schemas/backup';
 import { BackupService } from '../../src/services/backup/backupService';
+import { MeasurementPreferenceService } from '../../src/services/settings/measurementPreferenceService';
 import { TestDatabase } from '../database/testDatabase';
 
 const timestamp = '2026-08-22T20:00:00.000Z';
@@ -75,6 +76,7 @@ describe('BackupService', () => {
 
   it('serializes a versioned, complete, schema-valid portable backup file', async () => {
     await seed(database);
+    await new MeasurementPreferenceService(database).save('freedom');
     const service = new BackupService(database);
 
     const contents = await service.createBackupContents(timestamp);
@@ -82,7 +84,7 @@ describe('BackupService', () => {
     const backup = parseBackupDocument(contents);
     expect(backup).toMatchObject({
       format: 'personal-nutrition-tracker',
-      version: 2,
+      version: 3,
       createdAt: timestamp,
     });
     expect(backup.data.foods).toHaveLength(1);
@@ -91,6 +93,7 @@ describe('BackupService', () => {
     expect(backup.data.weighIns).toHaveLength(1);
     expect(backup.data.goals).toHaveLength(1);
     expect(backup.data.logDayCompletions).toHaveLength(1);
+    expect(backup.data.preferences).toEqual({ measurementSystem: 'freedom' });
     expect(backup.data.foods[0]).toMatchObject({
       standard_portion_label: 'piece',
       standard_portion_weight_g: 28,
@@ -130,6 +133,7 @@ describe('BackupService', () => {
 
   it('restores all backed-up data transactionally', async () => {
     await seed(database);
+    await new MeasurementPreferenceService(database).save('freedom');
     const sourceService = new BackupService(database);
     const contents = JSON.stringify(await sourceService.createDocument(timestamp));
 
@@ -149,6 +153,7 @@ describe('BackupService', () => {
     });
     expect(await target.getFirstAsync('SELECT * FROM food_log_entries WHERE id = ?;', 'log')).not.toBeNull();
     expect(await target.getFirstAsync('SELECT * FROM log_day_completions WHERE date = ?;', '2026-08-22')).not.toBeNull();
+    expect(await new MeasurementPreferenceService(target).load()).toBe('freedom');
     target.close();
   });
 
@@ -170,11 +175,24 @@ describe('BackupService', () => {
     };
 
     const parsed = parseBackupDocument(JSON.stringify(legacy));
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.data.foods[0]).toMatchObject({
       standard_portion_label: null,
       standard_portion_weight_g: null,
     });
+    expect(parsed.data.preferences).toEqual({ measurementSystem: 'grams' });
+  });
+
+  it('upgrades a version 2 backup with the default measurement preference', async () => {
+    await seed(database);
+    const current = await new BackupService(database).createDocument(timestamp);
+    const { preferences: _preferences, ...legacyData } = current.data;
+    const legacy = { ...current, version: 2, data: legacyData };
+
+    const parsed = parseBackupDocument(JSON.stringify(legacy));
+
+    expect(parsed.version).toBe(3);
+    expect(parsed.data.preferences).toEqual({ measurementSystem: 'grams' });
   });
 
   it('rolls back a failed restore and preserves the current database', async () => {

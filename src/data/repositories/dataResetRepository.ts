@@ -16,6 +16,7 @@ export class DataResetRepository {
       DELETE FROM weigh_ins;
       DELETE FROM log_day_completions;
       UPDATE retention_state SET last_run_date = NULL WHERE id = 1;
+      UPDATE app_preferences SET measurement_system = 'grams' WHERE id = 1;
     `);
   }
 }

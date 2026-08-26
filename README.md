@@ -32,6 +32,7 @@ morality to food.
 -   iPhone 11 and newer support
 -   Daily food logging
 -   Gram-based food entry
+-   Grams / Freedom Units measurement preference
 -   Local reusable food library
 -   Custom foods
 -   Optional standard portions for reusable foods
@@ -342,6 +343,25 @@ grams and that portion. For example, `1 stick = 28 g`. A portion count
 is converted to grams before using the existing nutrition calculation
 and log storage. Direct gram entry always remains available. Recipes do
 not require standard portions.
+
+## Freedom Units foundation
+
+The measurement preference is either `Grams` or `Freedom Units`, with
+`Grams` as the default. Freedom Units are an input and display layer;
+grams remain the canonical internal unit for stored food weights and all
+nutrition calculations.
+
+Volume units use these exact relationships:
+
+-   1 cup = 16 tablespoons
+-   1 tablespoon = 3 teaspoons
+-   1 cup = 48 teaspoons
+
+These relationships permit volume-to-volume conversion only. Never
+perform a generic conversion from teaspoons, tablespoons, or cups to
+grams. A volume amount may resolve to grams only when the selected Food
+provides a food-specific conversion. Until such a conversion is
+available, preserve the existing gram workflow.
 
 ------------------------------------------------------------------------
 
@@ -849,6 +869,11 @@ Protein Minimum
 Calorie Target Range
 ±10%                       ›
 
+PREFERENCES
+
+Measurements
+Grams                       ›
+
 DATA
 
 Backup
@@ -868,7 +893,7 @@ Reset Data permanently erases all user data while preserving the app's
 database structure. Require explicit confirmation that clearly states
 the action cannot be undone before deleting anything.
 
-Do not add theme, units, meal settings, notifications, account,
+Do not add theme, meal settings, notifications, account,
 language, dashboard, or other preference clutter.
 
 ## Goal editors
@@ -938,7 +963,7 @@ Concept:
 ``` json
 {
   "format": "personal-nutrition-tracker",
-  "version": 2,
+  "version": 3,
   "createdAt": "2026-08-21T17:00:00-07:00",
   "data": {
     "foods": [],
@@ -950,15 +975,20 @@ Concept:
     "foodLogs": [],
     "weighIns": [],
     "goals": [],
-    "logDayCompletions": []
+    "logDayCompletions": [],
+    "preferences": {
+      "measurementSystem": "grams"
+    }
   }
 }
 ```
 
 The `personal-nutrition-tracker` format identifier is retained for
 backward compatibility with backups created before the Autofutter rename.
-Backup version 2 includes optional Food standard portions. Version 1
-backups remain restorable and are treated as having no standard portions.
+Backup version 3 includes the measurement preference. Version 2 includes
+optional Food standard portions. Version 1 backups remain restorable and
+are treated as having no standard portions. Version 1 and 2 backups
+default to `Grams` when restored.
 The format must be versioned, schema-validatable, portable,
 human-inspectable where practical, and complete.
 
@@ -1175,6 +1205,13 @@ last_used_at TEXT NULL
 created_at TEXT NOT NULL
 updated_at TEXT NOT NULL
 deleted_at TEXT NULL
+```
+
+## app_preferences
+
+``` text
+id INTEGER PRIMARY KEY CHECK (id = 1)
+measurement_system TEXT NOT NULL CHECK (measurement_system IN ('grams', 'freedom'))
 ```
 
 ## recipe_ingredients

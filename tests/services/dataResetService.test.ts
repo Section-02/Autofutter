@@ -60,6 +60,7 @@ describe('DataResetService', () => {
       INSERT INTO log_day_completions (date, ended_at)
         VALUES ('2026-08-22', 'now');
       UPDATE retention_state SET last_run_date = '2026-08-22' WHERE id = 1;
+      UPDATE app_preferences SET measurement_system = 'freedom' WHERE id = 1;
     `);
 
     await new DataResetService(database).eraseAllData();
@@ -75,6 +76,9 @@ describe('DataResetService', () => {
     )).resolves.toEqual({ last_run_date: null });
     await expect(database.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) AS count FROM schema_migrations;',
-    )).resolves.toEqual({ count: 6 });
+    )).resolves.toEqual({ count: 7 });
+    await expect(database.getFirstAsync(
+      'SELECT measurement_system FROM app_preferences WHERE id = 1;',
+    )).resolves.toEqual({ measurement_system: 'grams' });
   });
 });
