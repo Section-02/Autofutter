@@ -1,10 +1,12 @@
 import { FoodRepository } from '@/data/repositories/foodRepository';
+import { FoodPortionRepository } from '@/data/repositories/foodPortionRepository';
 import { RecipeRepository } from '@/data/repositories/recipeRepository';
 import type { DatabaseConnection } from '@/data/database/types';
 import { calculateRecipeNutrition } from '@/domain/nutrition/recipeCalculator';
 import type { Nutrition, WeightedIngredient } from '@/domain/nutrition/nutritionTypes';
 import { RecipeService } from '@/services/recipes/recipeService';
 import type { StandardPortion } from '@/services/foods/foodService';
+import type { PortionConversion } from '@/domain/measurements/measurementOptions';
 
 export type LoggableSourceKind = 'food' | 'recipe' | 'recipe_variation';
 
@@ -20,6 +22,7 @@ export type LoggableSource = Readonly<{
   sourceRecipeId: string | null;
   sourceVariationId: string | null;
   standardPortion: StandardPortion | null;
+  portionConversions: readonly PortionConversion[];
 }>;
 
 export class LoggableSourceService {
@@ -32,6 +35,7 @@ export class LoggableSourceService {
         throw new Error('Food was not found.');
       }
 
+      const portions = await new FoodPortionRepository(this.database).listForFood(id);
       return {
         kind,
         id: food.id,
@@ -53,6 +57,13 @@ export class LoggableSourceService {
         standardPortion: food.standard_portion_label !== null && food.standard_portion_weight_g !== null
           ? { label: food.standard_portion_label, weightG: food.standard_portion_weight_g }
           : null,
+        portionConversions: portions.map((portion) => ({
+          key: `usda:${portion.sort_order}`,
+          label: portion.label,
+          amount: portion.amount,
+          gramWeightG: portion.gram_weight_g,
+          volumeUnit: portion.volume_unit,
+        })),
       };
     }
 
@@ -77,6 +88,7 @@ export class LoggableSourceService {
         sourceRecipeId: details.recipe.id,
         sourceVariationId: details.variation.id,
         standardPortion: null,
+        portionConversions: [],
       };
     }
 
@@ -123,6 +135,7 @@ export class LoggableSourceService {
       sourceRecipeId: recipe.id,
       sourceVariationId: null,
       standardPortion: null,
+      portionConversions: [],
     };
   }
 }

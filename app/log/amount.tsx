@@ -4,11 +4,11 @@ import { SymbolView } from 'expo-symbols';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NumericTextInput } from '@/components/common/NumericTextInput';
+import { PreferredAmountInput } from '@/components/measurements/PreferredAmountInput';
 import { NutritionFacts } from '@/components/nutrition/NutritionFacts';
 import { useAppDatabase } from '@/hooks/useAppDatabase';
+import { useMeasurementSystem } from '@/hooks/useMeasurementSystem';
 import type { LoggedNutrition } from '@/domain/nutrition/nutritionTypes';
-import { standardPortionQuantityToGrams } from '@/domain/nutrition/standardPortion';
 import { calculateWeighedNutrition, FoodLoggingService } from '@/services/logging/foodLoggingService';
 import type { LoggableSource, LoggableSourceKind } from '@/services/logging/loggableSourceService';
 import { colors } from '@/theme/colors';
@@ -24,12 +24,6 @@ function parseAmount(value: string): number | null {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-function displayAmount(value: number): string {
-  return String(Number(value.toFixed(6)));
-}
-
-type AmountMode = 'grams' | 'standard';
-
 export default function FoodAmountScreen() {
   const params = useLocalSearchParams<{ date?: string | string[]; kind?: string | string[]; id?: string | string[] }>();
   const date = first(params.date) ?? todayLocalDate();
@@ -43,10 +37,10 @@ export default function FoodAmountScreen() {
   const id = first(params.id) ?? '';
   const database = useAppDatabase();
   const service = useMemo(() => new FoodLoggingService(database), [database]);
+  const measurementSystem = useMeasurementSystem();
   const router = useRouter();
   const [source, setSource] = useState<LoggableSource | null>(null);
-  const [amount, setAmount] = useState('');
-  const [amountMode, setAmountMode] = useState<AmountMode>('grams');
+  const [amountG, setAmountG] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,13 +48,8 @@ export default function FoodAmountScreen() {
     service.loadSource(kind, id).then(setSource).catch(() => setError('Item could not be loaded.'));
   }, [id, kind, service]);
 
-  const enteredAmount = parseAmount(amount);
+  const grams = parseAmount(amountG);
   const standardPortion = source?.standardPortion ?? null;
-  const grams = enteredAmount === null
-    ? null
-    : amountMode === 'standard' && standardPortion !== null
-      ? standardPortionQuantityToGrams(enteredAmount, standardPortion.weightG)
-      : enteredAmount;
   let preview: LoggedNutrition | null = null;
   if (source !== null && grams !== null) {
     try {
@@ -83,17 +72,6 @@ export default function FoodAmountScreen() {
     }
   };
 
-  const selectAmountMode = (nextMode: AmountMode) => {
-    if (nextMode === amountMode || standardPortion === null) return;
-    const current = parseAmount(amount);
-    if (nextMode === 'standard') {
-      setAmount(current === null ? '1' : displayAmount(current / standardPortion.weightG));
-    } else {
-      setAmount(current === null ? '' : displayAmount(current * standardPortion.weightG));
-    }
-    setAmountMode(nextMode);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
@@ -105,48 +83,20 @@ export default function FoodAmountScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={styles.title}>{source?.name.toUpperCase() ?? ''}</Text>
           <Text style={styles.prompt}>How much?</Text>
-          {standardPortion !== null ? (
-            <View style={styles.modeRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: amountMode === 'grams' }}
-                onPress={() => selectAmountMode('grams')}
-                style={[styles.modeButton, amountMode === 'grams' && styles.modeButtonSelected]}
-              >
-                <Text style={[styles.modeText, amountMode === 'grams' && styles.modeTextSelected]}>GRAMS</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: amountMode === 'standard' }}
-                onPress={() => selectAmountMode('standard')}
-                style={[styles.modeButton, amountMode === 'standard' && styles.modeButtonSelected]}
-              >
-                <Text numberOfLines={1} style={[styles.modeText, amountMode === 'standard' && styles.modeTextSelected]}>
-                  1 {standardPortion.label.toUpperCase()}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
           <View style={styles.amountRow}>
-            <NumericTextInput
+            <PreferredAmountInput
+              accessibilityLabel="Amount"
               autoFocus
-              onChangeText={setAmount}
+              inputStyle={styles.amountInput}
+              measurementSystem={measurementSystem}
+              onChangeGrams={setAmountG}
               placeholder="0"
-              placeholderTextColor={colors.textMuted}
+              portions={source?.portionConversions ?? []}
               selectTextOnFocus
-              style={styles.amountInput}
-              value={amount}
+              standardPortion={standardPortion}
+              valueG={amountG}
             />
-            <Text
-              numberOfLines={1}
-              style={[styles.unit, amountMode === 'standard' && styles.standardUnit]}
-            >
-              {amountMode === 'standard' && standardPortion !== null ? standardPortion.label : 'g'}
-            </Text>
           </View>
-          {amountMode === 'standard' && standardPortion !== null ? (
-            <Text style={styles.portionHint}>1 {standardPortion.label} = {displayAmount(standardPortion.weightG)} g</Text>
-          ) : null}
           {preview !== null ? (
             <View style={styles.preview}>
               <Text style={styles.calories}>{preview.calories.toLocaleString()} kcal</Text>
@@ -176,16 +126,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.screenHorizontal },
   title: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: spacing.xxl },
   prompt: { color: colors.text, fontSize: 18, fontWeight: '600' },
-  modeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  modeButton: { borderColor: colors.border, borderRadius: 9, borderWidth: 1, flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },
-  modeButtonSelected: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-  modeText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
-  modeTextSelected: { color: colors.accent },
   amountRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm },
   amountInput: { minWidth: 150, height: 58, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface, color: colors.text, paddingHorizontal: spacing.md, fontSize: 28, fontWeight: '600' },
-  unit: { color: colors.textMuted, fontSize: 20 },
-  standardUnit: { flexShrink: 1 },
-  portionHint: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm },
   preview: { marginTop: spacing.xxl, gap: spacing.xl },
   calories: { color: colors.text, fontSize: 24, fontWeight: '700' },
   error: { color: colors.calorieOver, marginTop: spacing.lg },

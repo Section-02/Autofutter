@@ -351,6 +351,14 @@ The measurement preference is either `Grams` or `Freedom Units`, with
 grams remain the canonical internal unit for stored food weights and all
 nutrition calculations.
 
+When Freedom Units are selected, food logging and Recipe ingredient
+entry present only units that can safely resolve to grams. Stored USDA
+portion data supplies food-specific cup, tablespoon, and teaspoon
+conversions; an optional standard portion supplies labels such as stick,
+slice, or piece. Ounces and pounds are always safe mass-entry options,
+and grams always remain available as a fallback. Finished Recipe weights
+may be entered in ounces or pounds, but continue to be stored in grams.
+
 Volume units use these exact relationships:
 
 -   1 cup = 16 tablespoons

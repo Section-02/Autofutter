@@ -4,11 +4,13 @@ import { SymbolView } from 'expo-symbols';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NumericTextInput } from '@/components/common/NumericTextInput';
+import { FoodPreferredAmountInput } from '@/components/measurements/FoodPreferredAmountInput';
+import { PreferredAmountInput } from '@/components/measurements/PreferredAmountInput';
 import { NutritionFacts } from '@/components/nutrition/NutritionFacts';
 import { QuickEntryForm } from '@/components/quick/QuickEntryForm';
 import { FoodLogRepository, type FoodLogEntryRecord } from '@/data/repositories/foodLogRepository';
 import { useAppDatabase } from '@/hooks/useAppDatabase';
+import { useMeasurementSystem } from '@/hooks/useMeasurementSystem';
 import { FoodLoggingService } from '@/services/logging/foodLoggingService';
 import { QuickEntryService, type QuickEntryInput } from '@/services/logging/quickEntryService';
 import { colors } from '@/theme/colors';
@@ -22,6 +24,7 @@ export default function LogEntryEditorScreen() {
   const database = useAppDatabase();
   const weighedService = useMemo(() => new FoodLoggingService(database), [database]);
   const quickService = useMemo(() => new QuickEntryService(database), [database]);
+  const measurementSystem = useMeasurementSystem();
   const router = useRouter();
   const [entry, setEntry] = useState<FoodLogEntryRecord | null>(null);
   const [amount, setAmount] = useState('');
@@ -67,7 +70,7 @@ export default function LogEntryEditorScreen() {
     <View style={styles.quickHeader}><Pressable accessibilityLabel="Back" hitSlop={12} onPress={router.back}><SymbolView name="chevron.left" size={20} tintColor={colors.text} /></Pressable></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{entry?.display_name_snapshot.toUpperCase() ?? ''}</Text><Text style={styles.label}>Amount</Text>
-      <View style={styles.amountRow}><NumericTextInput onChangeText={setAmount} selectTextOnFocus style={styles.amountInput} value={amount} /><Text style={styles.unit}>g</Text></View>
+      <View style={styles.amountRow}>{entry?.source_food_id ? <FoodPreferredAmountInput accessibilityLabel="Logged amount" foodId={entry.source_food_id} inputStyle={styles.amountInput} measurementSystem={measurementSystem} onChangeGrams={setAmount} selectTextOnFocus valueG={amount} /> : <PreferredAmountInput accessibilityLabel="Logged amount" inputStyle={styles.amountInput} measurementSystem={measurementSystem} onChangeGrams={setAmount} selectTextOnFocus valueG={amount} />}</View>
       {preview ? <View style={styles.preview}><Text style={styles.calories}>{preview.calories.toLocaleString()} kcal</Text><NutritionFacts nutrition={preview} /></View> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable onPress={deleteEntry} style={styles.deleteAction}><Text style={styles.deleteText}>Delete Entry</Text></Pressable>
@@ -77,5 +80,5 @@ export default function LogEntryEditorScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: colors.background, flex: 1 }, quickHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg }, quickTitle: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.8 }, spacer: { width: 20 }, content: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.screenHorizontal }, title: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: spacing.xxl }, label: { color: colors.text, fontSize: 16, fontWeight: '600' }, amountRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }, amountInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 26, fontWeight: '600', height: 56, minWidth: 150, paddingHorizontal: spacing.md }, unit: { color: colors.textMuted, fontSize: 20 }, preview: { gap: spacing.xl, marginTop: spacing.xxl }, calories: { color: colors.text, fontSize: 24, fontWeight: '700' }, error: { color: colors.calorieOver, marginTop: spacing.lg }, deleteAction: { marginTop: spacing.xl, paddingVertical: spacing.lg }, deleteText: { color: colors.calorieOver, fontSize: 15, fontWeight: '600' }, actionArea: { padding: spacing.lg }, button: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 12, height: 50, justifyContent: 'center' }, disabled: { opacity: 0.35 }, pressed: { opacity: 0.7 }, buttonText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
+  safeArea: { backgroundColor: colors.background, flex: 1 }, quickHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg }, quickTitle: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.8 }, spacer: { width: 20 }, content: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.screenHorizontal }, title: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: spacing.xxl }, label: { color: colors.text, fontSize: 16, fontWeight: '600' }, amountRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }, amountInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 26, fontWeight: '600', height: 56, minWidth: 150, paddingHorizontal: spacing.md }, preview: { gap: spacing.xl, marginTop: spacing.xxl }, calories: { color: colors.text, fontSize: 24, fontWeight: '700' }, error: { color: colors.calorieOver, marginTop: spacing.lg }, deleteAction: { marginTop: spacing.xl, paddingVertical: spacing.lg }, deleteText: { color: colors.calorieOver, fontSize: 15, fontWeight: '600' }, actionArea: { padding: spacing.lg }, button: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 12, height: 50, justifyContent: 'center' }, disabled: { opacity: 0.35 }, pressed: { opacity: 0.7 }, buttonText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
 });

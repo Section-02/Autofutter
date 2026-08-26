@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { NumericTextInput } from '@/components/common/NumericTextInput';
+import { FoodPreferredAmountInput } from '@/components/measurements/FoodPreferredAmountInput';
+import { PreferredAmountInput } from '@/components/measurements/PreferredAmountInput';
 import { IngredientPicker } from '@/components/recipe/IngredientPicker';
 import type { FoodRecord } from '@/data/repositories/foodRepository';
+import { useMeasurementSystem } from '@/hooks/useMeasurementSystem';
 import type { RecipeDraft, RecipeIngredientInput } from '@/services/recipes/recipeService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -32,6 +34,7 @@ type Props = Readonly<{
 }>;
 
 export function RecipeForm({ initialValues, busy, submitLabel, onSubmit, footer }: Props) {
+  const measurementSystem = useMeasurementSystem();
   const [name, setName] = useState(initialValues.name);
   const [finishedWeight, setFinishedWeight] = useState(
     initialValues.finishedWeightG === null ? '' : String(initialValues.finishedWeightG),
@@ -101,16 +104,15 @@ export function RecipeForm({ initialValues, busy, submitLabel, onSubmit, footer 
               <Text numberOfLines={2} style={styles.ingredientNameText}>{ingredient.name}</Text>
               <Text style={styles.replace}>Tap to replace</Text>
             </Pressable>
-            <NumericTextInput
-              accessibilityLabel={`${ingredient.name} weight in grams`}
-              keyboardType="decimal-pad"
-              onChangeText={(weight) => setIngredients((current) => current.map((item) => item.key === ingredient.key ? { ...item, weight } : item))}
+            <FoodPreferredAmountInput
+              accessibilityLabel={`${ingredient.name} amount`}
+              foodId={ingredient.foodId}
+              inputStyle={styles.weightInput}
+              measurementSystem={measurementSystem}
+              onChangeGrams={(weight) => setIngredients((current) => current.map((item) => item.key === ingredient.key ? { ...item, weight } : item))}
               placeholder="0"
-              placeholderTextColor={colors.textMuted}
-              style={styles.weightInput}
-              value={ingredient.weight}
+              valueG={ingredient.weight}
             />
-            <Text style={styles.unit}>g</Text>
             <Pressable accessibilityLabel={`Remove ${ingredient.name}`} hitSlop={8} onPress={() => setIngredients((current) => current.filter((item) => item.key !== ingredient.key))}>
               <SymbolView name="minus.circle" size={20} tintColor={colors.calorieOver} />
             </Pressable>
@@ -122,8 +124,7 @@ export function RecipeForm({ initialValues, busy, submitLabel, onSubmit, footer 
 
         <Text style={styles.sectionTitle}>FINISHED WEIGHT</Text>
         <View style={styles.finishedRow}>
-          <NumericTextInput onChangeText={setFinishedWeight} placeholder="Optional" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} />
-          <Text style={styles.finishedUnit}>g</Text>
+          <PreferredAmountInput accessibilityLabel="Finished recipe weight" inputStyle={styles.finishedInput} measurementSystem={measurementSystem} onChangeGrams={setFinishedWeight} placeholder="Optional" valueG={finishedWeight} />
         </View>
         <Text style={styles.help}>Weigh the complete cooked recipe. Leave blank to save it as Incomplete.</Text>
 
@@ -156,12 +157,10 @@ const styles = StyleSheet.create({
   ingredientNameText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   replace: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   weightInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 9, borderWidth: 1, color: colors.text, fontSize: 15, height: 40, paddingHorizontal: spacing.sm, textAlign: 'right', width: 74 },
-  unit: { color: colors.textMuted, marginHorizontal: spacing.sm },
   addIngredient: { justifyContent: 'center', minHeight: 50 },
   addIngredientText: { color: colors.accent, fontSize: 14, fontWeight: '800' },
   finishedRow: { alignItems: 'center', flexDirection: 'row' },
   finishedInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, fontSize: 17, height: 48, paddingHorizontal: spacing.md, textAlign: 'right', width: 140 },
-  finishedUnit: { color: colors.textMuted, fontSize: 16, marginLeft: spacing.sm },
   help: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: spacing.sm },
   incomplete: { backgroundColor: colors.accentSoft, borderRadius: 12, marginTop: spacing.xl, padding: spacing.md },
   incompleteText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },

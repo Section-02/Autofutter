@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { NumericTextInput } from '@/components/common/NumericTextInput';
+import { FoodPreferredAmountInput } from '@/components/measurements/FoodPreferredAmountInput';
+import { PreferredAmountInput } from '@/components/measurements/PreferredAmountInput';
 import { IngredientPicker } from '@/components/recipe/IngredientPicker';
 import type { FoodRecord } from '@/data/repositories/foodRepository';
 import type { RecipeIngredientNutritionRecord, RecipeVariationOverrideRecord } from '@/data/repositories/recipeRepository';
 import type { VariationDraft, VariationOverrideInput } from '@/services/recipes/recipeService';
+import { useMeasurementSystem } from '@/hooks/useMeasurementSystem';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -41,6 +43,7 @@ function initialLines(base: readonly RecipeIngredientNutritionRecord[], override
 }
 
 export function VariationForm({ baseName, baseIngredients, initialName = '', initialFinishedWeightG = null, initialOverrides = [], busy, submitLabel, onSubmit, footer }: Props) {
+  const measurementSystem = useMeasurementSystem();
   const [name, setName] = useState(initialName);
   const [finishedWeight, setFinishedWeight] = useState(initialFinishedWeightG === null ? '' : String(initialFinishedWeightG));
   const [lines, setLines] = useState<Line[]>(() => initialLines(baseIngredients, initialOverrides));
@@ -85,14 +88,14 @@ export function VariationForm({ baseName, baseIngredients, initialName = '', ini
           <Text numberOfLines={2} style={[styles.foodName, line.removed && styles.removedText]}>{line.name}</Text>
           <Text style={styles.origin}>{line.baseId ? (line.foodId === line.originalFoodId ? 'Base ingredient' : 'Replacement') : 'Added ingredient'}</Text>
         </Pressable>
-        {!line.removed ? <><NumericTextInput onChangeText={(weight) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, weight } : item))} style={styles.weight} value={line.weight} /><Text style={styles.unit}>g</Text></> : null}
+        {!line.removed ? <FoodPreferredAmountInput accessibilityLabel={`${line.name} amount`} foodId={line.foodId} inputStyle={styles.weight} measurementSystem={measurementSystem} onChangeGrams={(weight) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, weight } : item))} valueG={line.weight} /> : null}
         <Pressable accessibilityLabel={line.removed ? `Restore ${line.name}` : `Remove ${line.name}`} hitSlop={8} onPress={() => line.baseId ? setLines((current) => current.map((item) => item.key === line.key ? { ...item, removed: !item.removed } : item)) : setLines((current) => current.filter((item) => item.key !== line.key))}>
           <SymbolView name={line.removed ? 'arrow.uturn.backward.circle' : 'minus.circle'} size={20} tintColor={line.removed ? colors.accent : colors.calorieOver} />
         </Pressable>
       </View>)}
       <Pressable onPress={() => setPicker({ visible: true })} style={styles.add}><Text style={styles.addText}>+ ADD INGREDIENT</Text></Pressable>
       <Text style={styles.section}>FINISHED WEIGHT</Text>
-      <View style={styles.finished}><NumericTextInput onChangeText={setFinishedWeight} placeholder="Required" placeholderTextColor={colors.textMuted} style={styles.finishedInput} value={finishedWeight} /><Text style={styles.finishedUnit}>g</Text></View>
+      <View style={styles.finished}><PreferredAmountInput accessibilityLabel="Finished variation weight" inputStyle={styles.finishedInput} measurementSystem={measurementSystem} onChangeGrams={setFinishedWeight} placeholder="Required" valueG={finishedWeight} /></View>
       <Text style={styles.help}>Weigh this finished version of the complete recipe.</Text>
       <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.save, (busy || pressed) && styles.dim]}><Text style={styles.saveText}>{busy ? 'SAVING…' : submitLabel}</Text></Pressable>
       {footer}
@@ -102,5 +105,5 @@ export function VariationForm({ baseName, baseIngredients, initialName = '', ini
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 60, paddingHorizontal: spacing.screenHorizontal }, base: { color: colors.accent, fontSize: 12, fontWeight: '800', marginBottom: spacing.xl }, label: { color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 }, nameInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 16, height: 50, marginTop: spacing.sm, paddingHorizontal: spacing.md }, section: { color: colors.text, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginBottom: spacing.sm, marginTop: spacing.xl }, row: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 68 }, removedRow: { opacity: 0.65 }, rowName: { flex: 1, paddingRight: spacing.sm }, foodName: { color: colors.text, fontSize: 14, fontWeight: '600' }, removedText: { textDecorationLine: 'line-through' }, origin: { color: colors.textMuted, fontSize: 11, marginTop: 2 }, weight: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 9, borderWidth: 1, color: colors.text, height: 40, paddingHorizontal: spacing.sm, textAlign: 'right', width: 70 }, unit: { color: colors.textMuted, marginHorizontal: spacing.sm }, add: { justifyContent: 'center', minHeight: 50 }, addText: { color: colors.accent, fontSize: 14, fontWeight: '800' }, finished: { alignItems: 'center', flexDirection: 'row' }, finishedInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, fontSize: 17, height: 48, paddingHorizontal: spacing.md, textAlign: 'right', width: 140 }, finishedUnit: { color: colors.textMuted, fontSize: 16, marginLeft: spacing.sm }, help: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm }, save: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 12, justifyContent: 'center', marginTop: spacing.xl, minHeight: 52 }, saveText: { color: colors.surface, fontSize: 15, fontWeight: '800' }, dim: { opacity: 0.55 },
+  content: { paddingBottom: 60, paddingHorizontal: spacing.screenHorizontal }, base: { color: colors.accent, fontSize: 12, fontWeight: '800', marginBottom: spacing.xl }, label: { color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 }, nameInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 16, height: 50, marginTop: spacing.sm, paddingHorizontal: spacing.md }, section: { color: colors.text, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginBottom: spacing.sm, marginTop: spacing.xl }, row: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 68 }, removedRow: { opacity: 0.65 }, rowName: { flex: 1, paddingRight: spacing.sm }, foodName: { color: colors.text, fontSize: 14, fontWeight: '600' }, removedText: { textDecorationLine: 'line-through' }, origin: { color: colors.textMuted, fontSize: 11, marginTop: 2 }, weight: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 9, borderWidth: 1, color: colors.text, height: 40, paddingHorizontal: spacing.sm, textAlign: 'right', width: 70 }, add: { justifyContent: 'center', minHeight: 50 }, addText: { color: colors.accent, fontSize: 14, fontWeight: '800' }, finished: { alignItems: 'center', flexDirection: 'row' }, finishedInput: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, fontSize: 17, height: 48, paddingHorizontal: spacing.md, textAlign: 'right', width: 140 }, help: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm }, save: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 12, justifyContent: 'center', marginTop: spacing.xl, minHeight: 52 }, saveText: { color: colors.surface, fontSize: 15, fontWeight: '800' }, dim: { opacity: 0.55 },
 });
