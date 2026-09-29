@@ -3,7 +3,7 @@
     "name": "Autofutter",
     "slug": "personal-nutrition-tracker",
     "icon": "./assets/icon.png",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "scheme": "personalnutritiontracker",
     "userInterfaceStyle": "light",

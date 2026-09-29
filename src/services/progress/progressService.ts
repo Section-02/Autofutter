@@ -76,6 +76,17 @@ export class ProgressService {
     const now = this.now();
     const endDate = todayLocalDateAt(now);
     const startDate = startDateForRange(range, endDate);
+    return this.loadBetween(startDate, endDate, now);
+  }
+
+  async loadCustomRange(startDate: string, endDate: string): Promise<ProgressData> {
+    if (startDate > endDate) {
+      throw new RangeError('Start date must be on or before end date.');
+    }
+    return this.loadBetween(startDate, endDate, this.now());
+  }
+
+  private async loadBetween(startDate: string | null, endDate: string, now: Date): Promise<ProgressData> {
     const [weights, allWeights, summaries, completions, goals] = await Promise.all([
       new WeightRepository(this.database).listBetween(startDate, endDate),
       new WeightRepository(this.database).listAll(),

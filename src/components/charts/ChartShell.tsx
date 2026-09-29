@@ -26,7 +26,7 @@ export function ChartShell({ children, empty, emptyText }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { minHeight: 275, overflow: 'hidden' },
+  container: { minHeight: 240, overflow: 'hidden' },
   chart: { paddingTop: spacing.sm },
   empty: { color: colors.textMuted, fontSize: 14, paddingVertical: 90, textAlign: 'center' },
 });

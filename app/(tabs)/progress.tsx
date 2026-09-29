@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,9 +14,10 @@ import { useAppDatabase } from '@/hooks/useAppDatabase';
 import { ProgressService, type ProgressData } from '@/services/progress/progressService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { parseLocalDate, toLocalDateString, todayLocalDate } from '@/utils/dates';
 
 const MODES: ProgressMode[] = ['Weight', 'Calories', 'Both'];
-const RANGES: ProgressRange[] = ['1M', '3M', '6M', '1Y', 'All'];
+const RANGES: ProgressRange[] = ['1W', '1M', '6W', '3M', 'All'];
 
 function shownWeight(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(1)} lb`;
@@ -26,22 +28,48 @@ function shownChange(value: number | null): string {
   return `${value > 0 ? '+' : ''}${value.toFixed(1)} lb`;
 }
 
+function shownRangeDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).format(parseLocalDate(value));
+}
+
 export default function ProgressScreen() {
   const database = useAppDatabase();
   const router = useRouter();
   const [mode, setMode] = useState<ProgressMode>('Weight');
   const [range, setRange] = useState<ProgressRange>('3M');
+  const [customRange, setCustomRange] = useState<Readonly<{ startDate: string; endDate: string }> | null>(null);
+  const [draftStartDate, setDraftStartDate] = useState(todayLocalDate);
+  const [draftEndDate, setDraftEndDate] = useState(todayLocalDate);
+  const [datePicker, setDatePicker] = useState<'start' | 'end' | null>(null);
   const [data, setData] = useState<ProgressData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
     let active = true;
     setError(null);
-    new ProgressService(database).load(range)
+    const progress = new ProgressService(database);
+    const request = customRange === null
+      ? progress.load(range)
+      : progress.loadCustomRange(customRange.startDate, customRange.endDate);
+    request
       .then((result) => { if (active) setData(result); })
       .catch(() => { if (active) setError('Unable to load progress.'); });
     return () => { active = false; };
-  }, [database, range]));
+  }, [customRange, database, range]));
+
+  const applyCustomRange = () => {
+    if (draftStartDate > draftEndDate) {
+      setError('The start date must be on or before the end date.');
+      return;
+    }
+    setError(null);
+    setCustomRange({ startDate: draftStartDate, endDate: draftEndDate });
+  };
+
+  const selectQuickRange = (value: ProgressRange) => {
+    setCustomRange(null);
+    setRange(value);
+  };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
@@ -64,8 +92,8 @@ export default function ProgressScreen() {
         <Segmented values={MODES} selected={mode} onChange={setMode} />
         <View style={styles.rangeRow}>
           {RANGES.map((value) => (
-            <Pressable key={value} onPress={() => setRange(value)} style={[styles.rangeButton, range === value && styles.rangeSelected]}>
-              <Text style={[styles.rangeText, range === value && styles.rangeTextSelected]}>{value}</Text>
+            <Pressable key={value} onPress={() => selectQuickRange(value)} style={[styles.rangeButton, customRange === null && range === value && styles.rangeSelected]}>
+              <Text style={[styles.rangeText, customRange === null && range === value && styles.rangeTextSelected]}>{value}</Text>
             </Pressable>
           ))}
         </View>
@@ -81,7 +109,43 @@ export default function ProgressScreen() {
             )}
           </View>
         ) : null}
+        <View style={styles.dateRangeSection}>
+          <Text style={styles.dateRangeLabel}>CUSTOM DATE RANGE</Text>
+          <View style={styles.dateRangeInputs}>
+            <Pressable accessibilityLabel="Start date" onPress={() => setDatePicker('start')} style={styles.dateButton}>
+              <Text style={styles.dateInputLabel}>START</Text>
+              <Text style={styles.dateButtonText}>{shownRangeDate(draftStartDate)}</Text>
+            </Pressable>
+            <Pressable accessibilityLabel="End date" onPress={() => setDatePicker('end')} style={styles.dateButton}>
+              <Text style={styles.dateInputLabel}>END</Text>
+              <Text style={styles.dateButtonText}>{shownRangeDate(draftEndDate)}</Text>
+            </Pressable>
+          </View>
+          <Pressable onPress={applyCustomRange} style={styles.applyDatesButton}><Text style={styles.applyDatesText}>APPLY DATES</Text></Pressable>
+        </View>
       </ScrollView>
+      <Modal animationType="slide" transparent visible={datePicker !== null}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>SELECT {datePicker === 'start' ? 'START' : 'END'} DATE</Text>
+              <Pressable onPress={() => setDatePicker(null)}><Text style={styles.done}>Done</Text></Pressable>
+            </View>
+            {datePicker !== null ? <DateTimePicker
+              display="inline"
+              maximumDate={parseLocalDate(datePicker === 'start' ? draftEndDate : todayLocalDate())}
+              minimumDate={datePicker === 'end' ? parseLocalDate(draftStartDate) : undefined}
+              mode="date"
+              onChange={(_, selected) => {
+                if (selected === undefined) return;
+                if (datePicker === 'start') setDraftStartDate(toLocalDateString(selected));
+                else setDraftEndDate(toLocalDateString(selected));
+              }}
+              value={parseLocalDate(datePicker === 'start' ? draftStartDate : draftEndDate)}
+            /> : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -119,5 +183,18 @@ const styles = StyleSheet.create({
   rangeText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
   rangeTextSelected: { color: colors.accent },
   chartSection: { marginTop: spacing.sm },
+  dateRangeSection: { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, marginTop: spacing.xl, paddingTop: spacing.lg },
+  dateRangeLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8, marginBottom: spacing.sm },
+  dateRangeInputs: { flexDirection: 'row', gap: spacing.sm },
+  dateButton: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, flex: 1, minHeight: 58, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  dateInputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
+  dateButtonText: { color: colors.text, fontSize: 14, fontWeight: '600', marginTop: 3 },
+  applyDatesButton: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 10, justifyContent: 'center', marginTop: spacing.md, minHeight: 42 },
+  applyDatesText: { color: colors.surface, fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
+  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.25)', flex: 1, justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: spacing.xxl },
+  modalHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  modalTitle: { color: colors.text, fontSize: 14, fontWeight: '700', letterSpacing: 0.8 },
+  done: { color: colors.accent, fontSize: 16, fontWeight: '700' },
   error: { color: colors.calorieOver, marginTop: spacing.lg, textAlign: 'center' },
 });

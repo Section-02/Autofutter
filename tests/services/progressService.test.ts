@@ -28,6 +28,27 @@ describe('ProgressService', () => {
     expect(data.weightSummary.totalChange).toBeCloseTo(-18.6, 10);
   });
 
+  it('filters both calories and weights to a selected custom date range', async () => {
+    let id = 0;
+    const weights = new WeightService(database, { createId: () => `weight-${++id}`, now: () => now });
+    await weights.save({ date: '2026-07-01', weightLb: 300 });
+    await weights.save({ date: '2026-07-15', weightLb: 298 });
+    await weights.save({ date: '2026-08-01', weightLb: 295 });
+    await database.runAsync(
+      `INSERT INTO daily_nutrition_summaries
+       (date, calories, protein_g, fat_g, carbs_g, sodium_mg, cholesterol_mg, has_partial_nutrition, updated_at)
+       VALUES (?, ?, 0, 0, 0, 0, 0, 0, ?), (?, ?, 0, 0, 0, 0, 0, 0, ?);`,
+      '2026-07-15', 1900, timestamp,
+      '2026-08-01', 2100, timestamp,
+    );
+
+    const data = await new ProgressService(database, { now: () => now }).loadCustomRange('2026-07-10', '2026-07-20');
+    expect(data.startDate).toBe('2026-07-10');
+    expect(data.endDate).toBe('2026-07-20');
+    expect(data.weights.map(({ date }) => date)).toEqual(['2026-07-15']);
+    expect(data.calories.map(({ date }) => date)).toEqual(['2026-07-15']);
+  });
+
   it('includes only ended calorie days and preserves historical effective goal ranges', async () => {
     await database.runAsync(
       `INSERT INTO daily_nutrition_summaries
