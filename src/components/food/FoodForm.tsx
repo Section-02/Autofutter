@@ -138,6 +138,12 @@ export function FoodForm({
 
   const submit = async (handler: (values: FoodFormSubmission) => Promise<void>) => {
     setError(null);
+    const hasStandardPortionLabel = standardPortionLabel.trim() !== '';
+    const hasStandardPortionWeight = standardPortionWeightG.trim() !== '';
+    if (hasStandardPortionLabel !== hasStandardPortionWeight) {
+      setError('Enter both a standard portion name and its gram weight, or leave both blank.');
+      return;
+    }
     const submission: FoodFormSubmission = {
       name,
       referenceWeightG: parseNumber(referenceWeightG),
@@ -150,7 +156,7 @@ export function FoodForm({
         cholesterolMg: parseNumber(values.cholesterolMg),
       },
       standardPortion:
-        standardPortionLabel.trim() === '' && standardPortionWeightG.trim() === ''
+        !hasStandardPortionLabel
           ? null
           : {
               label: standardPortionLabel,
@@ -208,6 +214,9 @@ export function FoodForm({
           />
           <Text style={styles.unit}>g</Text>
         </View>
+        <Text style={styles.portionHelp}>
+          Enter both fields to make this portion available when logging.
+        </Text>
 
         <Text style={styles.sectionTitle}>NUTRITION FACTS</Text>
         <Text style={styles.help}>These nutrition facts are for:</Text>
@@ -315,6 +324,12 @@ const styles = StyleSheet.create({
   },
   referenceRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   portionRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  portionHelp: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+  },
   portionPrefix: { color: colors.text, fontSize: 16 },
   portionEquals: { color: colors.textMuted, fontSize: 16 },
   portionLabelInput: {

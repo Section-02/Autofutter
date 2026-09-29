@@ -93,6 +93,7 @@ export default function FoodAmountScreen() {
               placeholder="0"
               portions={source?.portionConversions ?? []}
               selectTextOnFocus
+              showStandardPortionChoice
               standardPortion={standardPortion}
               valueG={amountG}
             />
